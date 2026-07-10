@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Документы — CorpAI Intelligence{% endblock %}
+
+{% block content %}
+<div class="h-full flex flex-col px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-on-surface">Документы</h1>
+            <p class="text-sm text-on-surface-variant mt-1">Управление корпоративными документами</p>
+        </div>
+        <button id="upload-btn" class="flex items-center gap-2 px-4 py-2.5 bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-all active:scale-95 text-sm font-medium">
+            <span class="material-symbols-outlined text-lg">upload</span>
+            Загрузить
+        </button>
+    </div>
+
+    <!-- Upload Form (hidden by default) -->
+    <div id="upload-form" class="hidden mb-6 p-6 glass-panel rounded-2xl border border-outline-variant/20">
+        <form id="document-upload" enctype="multipart/form-data" class="space-y-4">
+            <div class="flex items-center justify-center w-full">
+                <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-outline-variant/40 rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all">
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <span class="material-symbols-outlined text-3xl text-on-surface-variant/60 mb-2">cloud_upload</span>
+                        <p class="text-sm text-on-surface-variant/80">Перетащите файл или <span class="text-primary font-medium">выберите</span></p>
+                        <p class="text-xs text-on-surface-variant/50 mt-1">PDF, DOCX, XLSX, TXT до 50 MB</p>
+                    </div>
+                    <input type="file" name="file" class="hidden" accept=".pdf,.docx,.xlsx,.txt" />
+                </label>
+            </div>
+            <div class="flex items-center gap-3">
+                <select name="folder_id" class="px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Корневая папка</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 transition-all text-sm font-medium">
+                    Загрузить
+                </button>
+                <button type="button" id="cancel-upload" class="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface transition-all">
+                    Отмена
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="flex items-center gap-3 mb-4">
+        <div class="relative flex-1 max-w-md">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-lg">search</span>
+            <input type="text" id="doc-search" placeholder="Поиск документов..." class="w-full pl-10 pr-4 py-2 rounded-xl border border-outline-variant/20 bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+        </div>
+        <select id="status-filter" class="px-3 py-2 rounded-xl border border-outline-variant/20 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <option value="">Все статусы</option>
+            <option value="processing">В обработке</option>
+            <option value="ready">Готово</option>
+            <option value="error">Ошибка</option>
+        </select>
+    </div>
+
+    <!-- Documents Grid -->
+    <div id="documents-grid" class="flex-1 overflow-y-auto scrollbar-thin">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for doc in documents %}
+            <div class="doc-card glass-panel rounded-xl p-4 border border-outline-variant/10 hover:border-primary/20 transition-all cursor-pointer"
+                 data-doc-id="{{ doc.id }}">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary">
+                                {% if doc.filename.endswith('.pdf') %}picture_as_pdf
+                                {% elif doc.filename.endswith('.docx') %}description
+                                {% elif doc.filename.endswith('.xlsx') %}table_chart
+                                {% else %}insert_drive_file{% endif %}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-on-surface truncate max-w-[200px]">{{ doc.filename }}</p>
+                            <p class="text-xs text-on-surface-variant/60">{{ doc.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                        </div>
+                    </div>
+                    <span class="status-badge text-xs px-2 py-0.5 rounded-full font-medium
+                        {% if doc.status == 'ready' %}bg-success-container/30 text-success
+                        {% elif doc.status == 'processing' %}bg-warning-container/30 text-warning
+                        {% else %}bg-error-container/30 text-error{% endif %}">
+                        {{ doc.status }}
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-on-surface-variant/60">
+                    <span>{{ doc.chunk_count or 0 }} чанков</span>
+                    <span>·</span>
+                    <span>{{ (doc.file_size / 1024)|round(1) if doc.file_size else 0 }} KB</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                <span class="material-symbols-outlined text-5xl text-on-surface-variant/20 mb-4">folder_open</span>
+                <p class="text-on-surface-variant/60">Нет загруженных документов</p>
+                <p class="text-sm text-on-surface-variant/40 mt-1">Загрузите первый документ, чтобы начать работу</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Toggle upload form
+    document.getElementById('upload-btn').addEventListener('click', () => {
+        document.getElementById('upload-form').classList.toggle('hidden');
+    });
+    document.getElementById('cancel-upload').addEventListener('click', () => {
+        document.getElementById('upload-form').classList.add('hidden');
+    });
+
+    // File upload
+    document.getElementById('document-upload').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const file = formData.get('file');
+
+        if (!file || file.size === 0) return;
+
+        try {
+            const response = await fetch('/api/v1/documents/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                const err = await response.json();
+                alert('Ошибка загрузки: ' + (err.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            alert('Ошибка сети при загрузке файла');
+        }
+    });
+
+    // Document search (client-side filter)
+    document.getElementById('doc-search').addEventListener('input', filterDocs);
+    document.getElementById('status-filter').addEventListener('change', filterDocs);
+
+    function filterDocs() {
+        const query = document.getElementById('doc-search').value.toLowerCase();
+        const status = document.getElementById('status-filter').value;
+
+        document.querySelectorAll('.doc-card').forEach(card => {
+            const name = card.querySelector('.truncate').textContent.toLowerCase();
+            const cardStatus = card.querySelector('.status-badge').textContent.trim();
+            const matchesQuery = !query || name.includes(query);
+            const matchesStatus = !status || cardStatus === status;
+            card.style.display = matchesQuery && matchesStatus ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

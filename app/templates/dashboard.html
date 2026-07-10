@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд — CorpAI Intelligence{% endblock %}
+
+{% block content %}
+<div class="h-full overflow-y-auto scrollbar-thin px-6 py-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-on-surface">Дашборд</h1>
+        <p class="text-sm text-on-surface-variant mt-1">Статистика и аналитика системы</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">description</span>
+                </div>
+                <span class="text-sm font-medium text-on-surface-variant">Документов</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface" id="stat-documents">{{ stats.total_documents }}</p>
+            <p class="text-xs text-on-surface-variant/60 mt-1">
+                <span class="text-success">{{ stats.ready_documents }}</span> готово ·
+                <span class="text-warning">{{ stats.processing_documents }}</span> в обработке
+            </p>
+        </div>
+
+        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-lg bg-secondary-container/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-secondary">database</span>
+                </div>
+                <span class="text-sm font-medium text-on-surface-variant">Чанков</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface" id="stat-chunks">{{ stats.total_chunks }}</p>
+            <p class="text-xs text-on-surface-variant/60 mt-1">в векторной БД</p>
+        </div>
+
+        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-lg bg-tertiary-container/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-tertiary">chat</span>
+                </div>
+                <span class="text-sm font-medium text-on-surface-variant">Сессий чата</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface" id="stat-sessions">{{ stats.total_sessions }}</p>
+            <p class="text-xs text-on-surface-variant/60 mt-1">активных сессий</p>
+        </div>
+
+        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">storage</span>
+                </div>
+                <span class="text-sm font-medium text-on-surface-variant">Хранилище</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface" id="stat-storage">{{ stats.storage_used }}</p>
+            <p class="text-xs text-on-surface-variant/60 mt-1">использовано</p>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
+            <h2 class="text-lg font-bold text-on-surface mb-4">Последние документы</h2>
+            <div class="space-y-3">
+                {% for doc in recent_documents %}
+                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-variant/20 transition-all">
+                    <div class="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm text-primary">
+                            {% if doc.filename.endswith('.pdf') %}picture_as_pdf
+                            {% elif doc.filename.endswith('.docx') %}description
+                            {% elif doc.filename.endswith('.xlsx') %}table_chart
+                            {% else %}insert_drive_file{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-on-surface truncate">{{ doc.filename }}</p>
+                        <p class="text-xs text-on-surface-variant/60">{{ doc.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                        {% if doc.status == 'ready' %}bg-success-container/30 text-success
+                        {% elif doc.status == 'processing' %}bg-warning-container/30 text-warning
+                        {% else %}bg-error-container/30 text-error{% endif %}">
+                        {{ doc.status }}
+                    </span>
+                </div>
+                {% else %}
+                <p class="text-sm text-on-surface-variant/60 text-center py-8">Нет документов</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
+            <h2 class="text-lg font-bold text-on-surface mb-4">Недавние запросы</h2>
+            <div class="space-y-3">
+                {% for msg in recent_messages %}
+                <div class="p-3 rounded-lg hover:bg-surface-variant/20 transition-all">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="material-symbols-outlined text-sm
+                            {% if msg.role == 'user' %}text-secondary{% else %}text-primary{% endif %}">
+                            {% if msg.role == 'user' %}person{% else %}psychology{% endif %}
+                        </span>
+                        <span class="text-xs font-medium text-on-surface-variant">
+                            {% if msg.role == 'user' %}Вы{% else %}CorpAI{% endif %}
+                        </span>
+                        <span class="text-xs text-on-surface-variant/40 ml-auto">{{ msg.created_at.strftime('%H:%M') }}</span>
+                    </div>
+                    <p class="text-sm text-on-surface-variant/80 truncate">{{ msg.content[:100] }}</p>
+                </div>
+                {% else %}
+                <p class="text-sm text-on-surface-variant/60 text-center py-8">Нет запросов</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

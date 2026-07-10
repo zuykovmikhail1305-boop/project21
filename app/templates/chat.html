@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Чат — CorpAI Intelligence{% endblock %}
+
+{% block content %}
+<div class="h-full flex flex-col">
+    <!-- Chat Messages Area -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto scrollbar-thin px-4 py-6 space-y-4">
+        <!-- Welcome message (shown when no messages) -->
+        <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-center px-6 -mt-12">
+            <div class="w-16 h-16 bg-primary-container/50 rounded-full flex items-center justify-center mb-4">
+                <span class="material-symbols-outlined text-3xl text-primary">psychology</span>
+            </div>
+            <h2 class="text-2xl font-bold text-on-surface mb-2">CorpAI Intelligence</h2>
+            <p class="text-on-surface-variant mb-8 max-w-md">
+                Ваш ассистент по корпоративным документам. Задайте вопрос или попросите проанализировать документ.
+            </p>
+            <div class="flex flex-wrap justify-center gap-3">
+                <button class="suggestion-btn flex items-center gap-2 px-4 py-2.5 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-95 rounded-full text-sm text-on-surface-variant hover:text-primary border border-outline-variant/20"
+                        data-query="Найди информацию о квартальных отчётах">
+                    <span class="material-symbols-outlined text-lg">search</span>
+                    Найти отчёты
+                </button>
+                <button class="suggestion-btn flex items-center gap-2 px-4 py-2.5 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-95 rounded-full text-sm text-on-surface-variant hover:text-primary border border-outline-variant/20"
+                        data-query="Составь саммари последнего документа">
+                    <span class="material-symbols-outlined text-lg">summarize</span>
+                    Саммари
+                </button>
+                <button class="suggestion-btn flex items-center gap-2 px-4 py-2.5 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-95 rounded-full text-sm text-on-surface-variant hover:text-primary border border-outline-variant/20"
+                        data-query="Проанализируй документы по бюджету">
+                    <span class="material-symbols-outlined text-lg">analytics</span>
+                    Аналитика
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="border-t border-outline-variant/10 bg-surface/80 backdrop-blur-xl px-4 py-4">
+        <div class="max-w-4xl mx-auto">
+            <form id="chat-form" class="flex items-end gap-3">
+                <div class="flex-1 relative">
+                    <textarea id="chat-input"
+                              class="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface px-5 py-3.5 pr-12 text-sm
+                                     focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30
+                                     placeholder:text-on-surface-variant/50 scrollbar-thin"
+                              rows="1"
+                              placeholder="Задайте вопрос о документах..."
+                              style="min-height: 48px; max-height: 200px;"
+                    ></textarea>
+                    <button type="submit"
+                            id="send-button"
+                            class="absolute right-2 bottom-2 p-2 rounded-xl bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-lg">arrow_upward</span>
+                    </button>
+                </div>
+            </form>
+            <p class="text-xs text-on-surface-variant/50 mt-2 text-center">
+                CorpAI может допускать ошибки. Проверяйте важную информацию.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let currentSessionId = null;
+    let isStreaming = false;
+    let eventSource = null;
+
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-button');
+    const welcomeMessage = document.getElementById('welcome-message');
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+    });
+
+    // Submit on Enter (Shift+Enter for newline)
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Suggestion buttons
+    document.querySelectorAll('.suggestion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            chatInput.value = btn.dataset.query;
+            chatForm.dispatchEvent(new Event('submit'));
+        });
+    });
+
+    // Form submit
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message || isStreaming) return;
+
+        // Hide welcome
+        welcomeMessage?.classList.add('hidden');
+
+        // Add user message
+        addMessage('user', message);
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+
+        // Show typing indicator
+        const typingId = showTyping();
+
+        // Start streaming
+        isStreaming = true;
+        sendButton.disabled = true;
+
+        try {
+            const response = await fetch('/api/v1/chat/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: currentSessionId,
+                    message: message,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            // Read SSE stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let assistantMessageEl = null;
+            let assistantContent = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) {
+                        const eventType = line.slice(7).trim();
+                        // Next line should be data
+                        continue;
+                    }
+                    if (line.startsWith('data: ')) {
+                        const data = JSON.parse(line.slice(6));
+
+                        if (data.route) {
+                            // Route event
+                            console.log('Route:', data.route, 'Error:', data.error);
+                        }
+
+                        if (data.token) {
+                            // Token event
+                            if (!assistantMessageEl) {
+                                removeTyping(typingId);
+                                assistantMessageEl = addMessage('assistant', '', true);
+                            }
+                            assistantContent += data.token;
+                            assistantMessageEl.querySelector('.message-content').textContent = assistantContent;
+                            scrollToBottom();
+                        }
+
+                        if (data.citations) {
+                            // Citations event
+                            if (assistantMessageEl) {
+                                const citationsDiv = document.createElement('div');
+                                citationsDiv.className = 'mt-3 p-3 bg-surface-variant/30 rounded-lg';
+                                citationsDiv.innerHTML = data.html || '';
+                                assistantMessageEl.querySelector('.message-bubble').appendChild(citationsDiv);
+                            }
+                        }
+
+                        if (data.session_id) {
+                            currentSessionId = data.session_id;
+                        }
+
+                        if (data.error) {
+                            console.error('Stream error:', data.error);
+                            if (!assistantMessageEl) {
+                                removeTyping(typingId);
+                                assistantMessageEl = addMessage('assistant', '', true);
+                            }
+                            assistantMessageEl.querySelector('.message-content').textContent =
+                                'Произошла ошибка при обработке запроса. Пожалуйста, попробуйте ещё раз.';
+                        }
+                    }
+                }
+            }
+
+            // Ensure typing indicator is removed
+            removeTyping(typingId);
+
+        } catch (error) {
+            console.error('Stream error:', error);
+            removeTyping(typingId);
+            addMessage('assistant', 'Произошла ошибка при обработке запроса. Пожалуйста, попробуйте ещё раз.');
+        } finally {
+            isStreaming = false;
+            sendButton.disabled = false;
+            scrollToBottom();
+        }
+    });
+
+    function addMessage(role, content, isStreaming = false) {
+        const isUser = role === 'user';
+        const div = document.createElement('div');
+        div.className = `flex ${isUser ? 'justify-end' : 'justify-start'} message-enter`;
+        div.innerHTML = `
+            <div class="message-bubble max-w-[80%] lg:max-w-[65%]">
+                ${!isUser ? `
+                <div class="flex items-center gap-2 mb-1.5">
+                    <div class="w-7 h-7 rounded-full bg-primary-container/50 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm text-primary">psychology</span>
+                    </div>
+                    <span class="text-xs font-medium text-on-surface-variant">CorpAI</span>
+                </div>
+                ` : `
+                <div class="flex items-center gap-2 mb-1.5 justify-end">
+                    <span class="text-xs font-medium text-on-surface-variant">Вы</span>
+                    <div class="w-7 h-7 rounded-full bg-secondary-container/50 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm text-secondary">person</span>
+                    </div>
+                </div>
+                `}
+                <div class="message-content px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    isUser
+                        ? 'bg-primary text-on-primary rounded-br-md'
+                        : 'bg-surface-variant/50 text-on-surface rounded-bl-md'
+                }">
+                    ${isStreaming ? '' : content}
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+        return div;
+    }
+
+    function showTyping() {
+        const id = 'typing-' + Date.now();
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = 'flex justify-start message-enter';
+        div.innerHTML = `
+            <div class="max-w-[80%] lg:max-w-[65%]">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <div class="w-7 h-7 rounded-full bg-primary-container/50 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm text-primary">psychology</span>
+                    </div>
+                    <span class="text-xs font-medium text-on-surface-variant">CorpAI</span>
+                </div>
+                <div class="px-4 py-3 rounded-2xl bg-surface-variant/50 rounded-bl-md">
+                    <div class="flex items-center gap-1.5">
+                        <span class="typing-dot w-2 h-2 bg-primary rounded-full inline-block"></span>
+                        <span class="typing-dot w-2 h-2 bg-primary rounded-full inline-block"></span>
+                        <span class="typing-dot w-2 h-2 bg-primary rounded-full inline-block"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+        return id;
+    }
+
+    function removeTyping(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+
+    function scrollToBottom() {
+        setTimeout(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 50);
+    }
+</script>
+{% endblock %}

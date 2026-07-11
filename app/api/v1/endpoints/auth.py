@@ -1,9 +1,11 @@
 """API эндпоинты для аутентификации: register, login, logout, refresh, me."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.core.config import get_db
+from app.core.config import get_db, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.schemas.user import UserCreate, LoginRequest, UserResponse, TokenResponse
@@ -69,16 +71,21 @@ async def register(
 )
 async def login(
     user_in: LoginRequest,
+    request: Request,
+    response: Response,
     db: Session = Depends(get_db),
 ):
     """Аутентификация пользователя и получение JWT токенов.
 
     - Проверяет email и пароль
     - Возвращает access_token (30 мин) и refresh_token (7 дней)
+    - Устанавливает httpOnly cookie с access_token для HTML-страниц
     - Refresh token сохраняется в БД для возможности отзыва
 
     Args:
         user_in: Данные для входа (email, password).
+        request: HTTP запрос.
+        response: HTTP ответ (для установки cookie).
 
     Returns:
         TokenResponse с access_token, refresh_token, token_type.
@@ -101,6 +108,19 @@ async def login(
         )
 
     tokens = await token_service.create_tokens(user_id=user.id)  # type: ignore[arg-type]
+
+    # Устанавливаем httpOnly cookie с access_token для HTML-страниц
+    # Cookie не httpOnly, чтобы JS тоже мог его читать (для refresh)
+    response.set_cookie(
+        key="access_token",
+        value=tokens["access_token"],
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+        secure=False,  # True в production с HTTPS
+        httponly=False,  # False чтобы JS мог читать (для base.html)
+        samesite="lax",
+    )
 
     return TokenResponse(
         access_token=tokens["access_token"],

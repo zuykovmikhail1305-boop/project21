@@ -52,4 +52,4 @@ class EmbedderService:
     def vector_size(self) -> int:
         """Размерность эмбеддинга."""
         self._load_model()
-        return self._model.get_sentence_embedding_dimension()
+        return self._model.get_embedding_dimension()

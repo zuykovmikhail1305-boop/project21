@@ -146,7 +146,15 @@
 
     <script>
         // ===================== Auth State =====================
-        const accessToken = localStorage.getItem('access_token');
+        // Helper: get cookie value by name
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? decodeURIComponent(match[2]) : null;
+        }
+
+        // Токен для API-запросов (fetch) берём из localStorage
+        // Для HTML-навигации токен автоматически отправляется через cookie
+        const accessToken = localStorage.getItem('access_token') || getCookie('access_token');
         const refreshToken = localStorage.getItem('refresh_token');
         const userInfo = document.getElementById('user-info');
         const userName = document.getElementById('user-name');
@@ -164,9 +172,13 @@
             }
 
             try {
-                const response = await fetch('/api/v1/auth/me', {
-                    headers: { 'Authorization': `Bearer ${accessToken}` },
-                });
+                // Используем cookie (автоматически отправляется браузером)
+                // или Authorization header из localStorage
+                const headers = {};
+                if (accessToken) {
+                    headers['Authorization'] = `Bearer ${accessToken}`;
+                }
+                const response = await fetch('/api/v1/auth/me', { headers });
 
                 if (response.ok) {
                     const data = await response.json();
@@ -224,6 +236,8 @@
 
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
+            // Удаляем cookie (устанавливаем с истёкшим сроком)
+            document.cookie = 'access_token=; max-age=0; path=/';
             window.location.href = '/login';
         });
 

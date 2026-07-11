@@ -169,10 +169,11 @@
                 if (response.ok) {
                     const data = await response.json();
 
-                    // Save tokens to localStorage
+                    // Save tokens to localStorage for API requests (fetch)
                     localStorage.setItem('access_token', data.access_token);
                     localStorage.setItem('refresh_token', data.refresh_token);
 
+                    // Cookie уже установлена сервером — для HTML-навигации
                     // Redirect to chat
                     window.location.href = '/chat';
                 } else {

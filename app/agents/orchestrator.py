@@ -34,10 +34,10 @@ class AgentOrchestrator:
         self.analytics = AnalyticsAgent()
 
         # Строим граф
-        self.graph = self._build_graph()
+        self._build_graph()
 
-    def _build_graph(self) -> StateGraph:
-        """Построить LangGraph граф."""
+    def _build_graph(self) -> None:
+        """Построить LangGraph граф и сохранить в self.graph."""
         workflow = StateGraph(AgentState)
 
         # Узлы
@@ -70,12 +70,8 @@ class AgentOrchestrator:
         # Финализация → конец
         workflow.add_edge("finalize", END)
 
-        try:
-            workflow.compile()
-            
-            return workflow
-        except Exception as e:
-            raise ValueError(f"Error compiling workflow: {e}")
+        # compile() возвращает CompiledGraph с методом ainvoke()
+        self.graph = workflow.compile()  # type: ignore[assignment]
 
     async def _route(self, state: AgentState) -> AgentState:
         """Узел: семантический роутер."""

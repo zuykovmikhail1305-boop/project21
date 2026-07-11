@@ -1,9 +1,13 @@
-"""FastAPI зависимости: аутентификация, группы доступа, БД."""
+"""FastAPI зависимости: аутентификация, группы доступа, БД.
+
+Поддерживает два способа передачи JWT:
+1. HTTP Header: Authorization: Bearer <token> (для API-клиентов / fetch)
+2. Cookie: access_token=<token> (для HTML-страниц при навигации)
+"""
 
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlalchemy.orm import Session
 
@@ -13,20 +17,45 @@ from app.crud.crud_user import get_user_by_id
 from app.models.user import User, UserGroup
 from app.services.acl import get_effective_groups
 
-security = HTTPBearer()
+
+def _extract_token(request: Request) -> Optional[str]:
+    """Извлечь JWT токен из заголовка Authorization или cookie.
+
+    Приоритет: Authorization header > cookie.
+    Это позволяет API-клиентам работать через header,
+    а HTML-страницам получать токен через cookie.
+
+    Args:
+        request: HTTP запрос.
+
+    Returns:
+        Строка токена или None.
+    """
+    # 1. Пробуем Authorization header (для API-запросов из JS)
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header[7:]
+
+    # 2. Пробуем cookie (для HTML-страниц при навигации)
+    token = request.cookies.get("access_token")
+    if token:
+        return token
+
+    return None
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
     db: Session = Depends(get_db),
 ) -> User:
     """Получить текущего пользователя из JWT access token.
 
-    Декодирует JWT, извлекает user_id из payload.sub,
+    Декодирует JWT из Authorization header или cookie,
+    извлекает user_id из payload.sub,
     проверяет что пользователь существует и активен.
 
     Args:
-        credentials: HTTP Bearer credentials (из заголовка Authorization).
+        request: HTTP запрос (для извлечения токена из header/cookie).
         db: Сессия БД.
 
     Returns:
@@ -35,7 +64,8 @@ async def get_current_user(
     Raises:
         HTTPException 401: Если токен невалиден, истёк, или пользователь не найден/неактивен.
     """
-    if credentials is None:
+    token = _extract_token(request)
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
@@ -43,7 +73,7 @@ async def get_current_user(
         )
 
     try:
-        payload = decode_token(credentials.credentials)
+        payload = decode_token(token)
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -101,7 +101,7 @@
                 <span class="material-symbols-outlined text-2xl">psychology</span>
                 CorpAI
             </a>
-            <nav class="hidden md:flex items-center gap-6 ml-8">
+            <nav class="hidden md:flex items-center gap-6 ml-8" id="main-nav">
                 <a href="/chat" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg {% if active_page == 'chat' %}bg-primary-container/40 text-primary{% else %}text-on-surface-variant hover:bg-surface-variant/30{% endif %} transition-all">
                     <span class="material-symbols-outlined text-lg">chat</span>
                     Чат
@@ -120,10 +120,22 @@
             <button id="theme-toggle" class="p-2 rounded-full hover:bg-surface-variant/30 transition-all" title="Переключить тему">
                 <span class="material-symbols-outlined text-on-surface-variant">dark_mode</span>
             </button>
-            <div class="flex items-center gap-2 px-3 py-1.5 bg-primary-container/30 rounded-full">
+
+            <!-- User info (shown when authenticated) -->
+            <div id="user-info" class="hidden flex items-center gap-2 px-3 py-1.5 bg-primary-container/30 rounded-full">
                 <span class="material-symbols-outlined text-sm text-primary">person</span>
-                <span class="text-sm font-medium text-primary">Пользователь</span>
+                <span id="user-name" class="text-sm font-medium text-primary">Пользователь</span>
             </div>
+
+            <!-- Login button (shown when not authenticated) -->
+            <a id="login-btn" href="/login" class="hidden px-4 py-1.5 bg-primary text-on-primary rounded-full text-sm font-medium hover:bg-primary/90 transition-all">
+                Войти
+            </a>
+
+            <!-- Logout button -->
+            <button id="logout-btn" class="hidden p-2 rounded-full hover:bg-surface-variant/30 transition-all" title="Выйти">
+                <span class="material-symbols-outlined text-on-surface-variant">logout</span>
+            </button>
         </div>
     </header>
 
@@ -133,7 +145,92 @@
     </main>
 
     <script>
-        // Theme toggle
+        // ===================== Auth State =====================
+        const accessToken = localStorage.getItem('access_token');
+        const refreshToken = localStorage.getItem('refresh_token');
+        const userInfo = document.getElementById('user-info');
+        const userName = document.getElementById('user-name');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const mainNav = document.getElementById('main-nav');
+
+        async function loadUser() {
+            if (!accessToken) {
+                // Not authenticated
+                loginBtn.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                logoutBtn.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/auth/me', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    userName.textContent = data.username;
+                    userInfo.classList.remove('hidden');
+                    loginBtn.classList.add('hidden');
+                    logoutBtn.classList.remove('hidden');
+                } else {
+                    // Token expired — try refresh
+                    if (refreshToken) {
+                        const refreshResponse = await fetch('/api/v1/auth/refresh', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ refresh_token: refreshToken }),
+                        });
+
+                        if (refreshResponse.ok) {
+                            const data = await refreshResponse.json();
+                            localStorage.setItem('access_token', data.access_token);
+                            localStorage.setItem('refresh_token', data.refresh_token);
+                            // Retry loading user
+                            return loadUser();
+                        }
+                    }
+
+                    // Can't refresh — show login
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    loginBtn.classList.remove('hidden');
+                    userInfo.classList.add('hidden');
+                    logoutBtn.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                loginBtn.classList.remove('hidden');
+            }
+        }
+
+        // Logout
+        logoutBtn.addEventListener('click', async () => {
+            if (refreshToken) {
+                try {
+                    await fetch('/api/v1/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                        },
+                        body: JSON.stringify({ refresh_token: refreshToken }),
+                    });
+                } catch (err) {
+                    console.error('Logout error:', err);
+                }
+            }
+
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
+        });
+
+        // Load user on page load
+        loadUser();
+
+        // ===================== Theme Toggle =====================
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
 

@@ -1,26 +1,62 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 
-
-from app.core.config import engine, Base
+from app.core.config import engine, Base, SessionLocal
 from app.models import *  # noqa: F401, F403 — регистрация всех моделей в Base.metadata
+from app.core.seed import seed_groups
 from app.api.v1.api import api_router
 from app.routes import router as page_router, get_templates
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for FastAPI."""
     # Startup
     Base.metadata.create_all(bind=engine)
+
+    # Seed предопределённых групп (admins, users)
+    db = SessionLocal()
+    try:
+        seed_groups(db)
+    finally:
+        db.close()
+
     yield
     # Shutdown
     Base.metadata.drop_all(bind=engine)
 
+
 fastapi_app = FastAPI(title="CorpAI Intelligence", version="0.1.0", lifespan=lifespan)
+
+# === CORS ===
+fastapi_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",  # для React фронтенда в будущем
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# === Security Headers Middleware ===
+@fastapi_app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
 
 # === Static files ===
 static_dir = Path(__file__).parent / "app/static"
@@ -40,17 +76,12 @@ fastapi_app.include_router(api_router)
 # === Page Routes (HTML) ===
 fastapi_app.include_router(page_router)
 
-# @
-# async def on_startup():
-#     """Create database tables on startup (for MVP)."""
-#     Base.metadata.create_all(bind=engine)
-
 
 @fastapi_app.get("/")
 async def root():
     return {"message": "CorpAI Intelligence API", "status": "running"}
 
 
-if __name__ == "__main__": # for local development only, use uvicorn command for production
+if __name__ == "__main__":  # for local development only, use uvicorn command for production
     import uvicorn
     uvicorn.run(fastapi_app, host="127.0.0.1", port=8000)

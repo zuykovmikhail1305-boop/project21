@@ -16,6 +16,12 @@ class UserCreate(UserBase):
     password: str
 
 
+class LoginRequest(BaseModel):
+    """Схема для входа в систему (только email + password, без username)."""
+    email: str
+    password: str
+
+
 class UserResponse(UserBase):
     """Схема ответа с данными пользователя."""
     id: int
@@ -39,6 +45,7 @@ class UserGroupResponse(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    """Схема ответа с JWT токеном."""
+    """Схема ответа с JWT токенами."""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"

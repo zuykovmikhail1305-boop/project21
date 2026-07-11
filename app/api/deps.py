@@ -1,42 +1,98 @@
 """FastAPI зависимости: аутентификация, группы доступа, БД."""
 
 from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_db
-from app.models.user import User
+from app.core.security import decode_token
+from app.crud.crud_user import get_user_by_id
+from app.models.user import User, UserGroup
 from app.services.acl import get_effective_groups
 
 security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    """Получить текущего пользователя из JWT токена.
+    """Получить текущего пользователя из JWT access token.
 
-    TODO: Реализовать полноценную проверку JWT токена.
-    Для MVP возвращает пользователя с ID=1.
+    Декодирует JWT, извлекает user_id из payload.sub,
+    проверяет что пользователь существует и активен.
+
+    Args:
+        credentials: HTTP Bearer credentials (из заголовка Authorization).
+        db: Сессия БД.
+
+    Returns:
+        Объект User.
+
+    Raises:
+        HTTPException 401: Если токен невалиден, истёк, или пользователь не найден/неактивен.
     """
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # TODO: Декодировать JWT, извлечь user_id
-    # payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-    # user_id = payload.get("sub")
+    try:
+        payload = decode_token(credentials.credentials)
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    user = db.query(User).filter(User.id == 1).first()
+    # Проверяем тип токена — должен быть access
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type. Use access token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Извлекаем user_id
+    user_id_str: Optional[str] = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        user_id = int(user_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user ID in token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Получаем пользователя из БД
+    user = get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if not bool(user.is_active):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return user
 
 
@@ -44,5 +100,46 @@ async def get_current_user_groups(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[int]:
-    """Получить список ID групп текущего пользователя (с учётом наследования)."""
-    return await get_effective_groups(current_user.id, db)
+    """Получить список ID групп текущего пользователя (с учётом наследования).
+
+    Args:
+        current_user: Текущий пользователь (из JWT).
+        db: Сессия БД.
+
+    Returns:
+        Список ID групп.
+    """
+    return await get_effective_groups(current_user.id, db)  # type: ignore[arg-type]
+
+
+async def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Проверить, что текущий пользователь является администратором.
+
+    Args:
+        current_user: Текущий пользователь (из JWT).
+        db: Сессия БД.
+
+    Returns:
+        Объект User если пользователь администратор.
+
+    Raises:
+        HTTPException 403: Если пользователь не в группе admins.
+    """
+    admin_group = db.query(UserGroup).filter(UserGroup.name == "admins").first()
+    if not admin_group:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin group not found",
+        )
+
+    user_groups = await get_effective_groups(current_user.id, db)  # type: ignore[arg-type]
+    if admin_group.id not in user_groups:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+
+    return current_user

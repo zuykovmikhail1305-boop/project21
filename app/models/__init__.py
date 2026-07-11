@@ -1,6 +1,6 @@
 """SQLAlchemy модели БД."""
 
-from app.models.user import User, UserGroup, user_group_membership
+from app.models.user import User, UserGroup, user_group_membership, RefreshToken
 from app.models.document import (
     Folder,
     Document,
@@ -14,6 +14,7 @@ __all__ = [
     "User",
     "UserGroup",
     "user_group_membership",
+    "RefreshToken",
     "Folder",
     "Document",
     "DocumentChunk",

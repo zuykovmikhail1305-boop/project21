@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Вход{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700;800&family=Murecho:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        try {
+            tailwind.config = {
+                darkMode: 'class',
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#006B5E',
+                            'on-primary': '#FFFFFF',
+                            'primary-container': '#A7F5E5',
+                            'on-primary-container': '#00201B',
+                            secondary: '#4B635C',
+                            'on-secondary': '#FFFFFF',
+                            'secondary-container': '#CDE9DF',
+                            'on-secondary-container': '#07201B',
+                            tertiary: '#426277',
+                            'on-tertiary': '#FFFFFF',
+                            'tertiary-container': '#C9E7FF',
+                            'on-tertiary-container': '#001E2E',
+                            error: '#BA1A1A',
+                            'on-error': '#FFFFFF',
+                            'error-container': '#FFDAD6',
+                            'on-error-container': '#410002',
+                            background: '#FBFDF8',
+                            'on-background': '#191C1A',
+                            surface: '#FBFDF8',
+                            'on-surface': '#191C1A',
+                            'surface-variant': '#DBE5DE',
+                            'on-surface-variant': '#404943',
+                            'outline': '#707973',
+                            'outline-variant': '#BFC9C2',
+                            'surface-container-low': '#F0F5EF',
+                        },
+                        fontFamily: {
+                            sans: ['Google Sans', 'Murecho', 'system-ui', 'sans-serif'],
+                        },
+                    },
+                },
+            }
+        } catch (_e) {}
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 107, 94, 0.1);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 30, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .emerald-glow {
+            box-shadow: 0 0 20px rgba(0, 107, 94, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <a href="/" class="inline-flex items-center gap-2 text-2xl font-bold text-primary">
+                <span class="material-symbols-outlined text-3xl">psychology</span>
+                CorpAI
+            </a>
+            <p class="text-on-surface-variant mt-2">Войдите в систему для продолжения работы</p>
+        </div>
+
+        <!-- Success message after registration -->
+        <div id="register-success" class="hidden mb-4 p-3 rounded-xl bg-primary-container/60 text-on-primary-container text-sm text-center">
+            Регистрация прошла успешно! Войдите в систему.
+        </div>
+
+        <!-- Login Form -->
+        <div class="glass-panel rounded-2xl p-8 emerald-glow">
+            <form id="login-form" class="space-y-5">
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-on-surface-variant mb-1.5">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface/50 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                        placeholder="you@company.ru"
+                    />
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-on-surface-variant mb-1.5">Пароль</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface/50 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                        placeholder="Введите пароль"
+                    />
+                </div>
+
+                <!-- Error message -->
+                <div id="error-message" class="hidden p-3 rounded-xl bg-error-container text-on-error-container text-sm"></div>
+
+                <!-- Submit -->
+                <button
+                    type="submit"
+                    id="login-btn"
+                    class="w-full py-2.5 px-4 bg-primary text-on-primary rounded-xl font-medium hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    <span id="btn-text">Войти</span>
+                    <span id="btn-spinner" class="hidden">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </form>
+
+            <!-- Register link -->
+            <p class="text-center mt-6 text-sm text-on-surface-variant">
+                Нет аккаунта?
+                <a href="/register" class="text-primary font-medium hover:underline">Зарегистрироваться</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Show success message if redirected from registration
+        if (window.location.search.includes('registered=1')) {
+            document.getElementById('register-success').classList.remove('hidden');
+        }
+
+        const form = document.getElementById('login-form');
+        const errorDiv = document.getElementById('error-message');
+        const btn = document.getElementById('login-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorDiv.classList.add('hidden');
+
+            // Disable button
+            btn.disabled = true;
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Save tokens to localStorage
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+
+                    // Redirect to chat
+                    window.location.href = '/chat';
+                } else {
+                    const data = await response.json();
+                    showError(data.detail || 'Ошибка входа');
+                }
+            } catch (err) {
+                showError('Ошибка соединения с сервером');
+            } finally {
+                btn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+            }
+        });
+
+        function showError(msg) {
+            errorDiv.textContent = msg;
+            errorDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

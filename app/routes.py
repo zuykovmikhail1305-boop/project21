@@ -124,6 +124,7 @@ async def dashboard_page(
 
     tmpl = get_templates()
     return tmpl.TemplateResponse(
+        request,
         "dashboard.html",
         {
             "request": request,
@@ -138,5 +139,42 @@ async def dashboard_page(
             },
             "recent_documents": recent_documents,
             "recent_messages": recent_messages,
+        },
+    )
+
+@router.get("/settings", response_class=HTMLResponse, include_in_schema=False)
+async def settings_page(request: Request):
+    """Settings page."""
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request,
+        "settings.html",
+        {
+            "request": request,
+            "active_page": "settings",
+        },
+    )
+
+@router.get("/login", response_class=HTMLResponse, include_in_schema=False)
+async def login_page(request: Request):
+    """Login page."""
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request, "login.html",
+        {
+            "request": request,
+            "active_page": "login",
+        },
+    )
+
+@router.get("/register", response_class=HTMLResponse, include_in_schema=False)
+async def register_page(request: Request):
+    """Register page."""
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request, "register.html",
+        {
+            "request": request,
+            "active_page": "register",
         },
     )

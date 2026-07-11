@@ -58,6 +58,10 @@ dependencies = [
     "watchfiles>=1.2.0",
     "websockets>=15.0.1",
     "xxhash>=3.8.1",
+    "passlib[argon2]>=1.7.4",
+    "slowapi>=0.1.9",
+    "python-jose[cryptography]>=3.3.0",
+    "pwdlib[argon2]>=0.3.0",
 ]
 
 [tool.uv.workspace]

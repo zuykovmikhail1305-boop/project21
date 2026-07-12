@@ -1,16 +1,12 @@
-from qdrant_client import QdrantClient, models
+from sentence_transformers import SentenceTransformer
 
-class Embending():
-    def __init__(self, text):
-        self.text = text
-        
-    def make_embending(self):
-        client = QdrantClient(":memory:")
+class Embedder:
+    def __init__(self, model_name="sentence-transformers/all-MiniLM-L6-v2"):
+        self.model = SentenceTransformer(model_name)
+    
+    def encode(self, text):
+        return self.model.encode(text).tolist()
+    
 
-        client.create_collection(
-        collection_name="my_docs",
-        vectors_config=models.VectorParams(
-            size=384,                 # размерность вашей модели
-            distance=models.Distance.COSINE
-        )
-    )      
+e = Embedder()
+print(e.encode('Я люблю есть клубнику'))

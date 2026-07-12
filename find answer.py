@@ -1,4 +1,6 @@
 from openai import OpenAI
+from embending import Embedding
+from processing import Processing
 
 class Find_answer():
 
@@ -46,3 +48,6 @@ class Find_answer():
         )
 
         return response.choices[0].message.content
+    
+    def find_answer(self):
+        pass

@@ -4,20 +4,43 @@ from llama_index.core import Document, Settings
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 import re
+from collections import defaultdict
+import os
+import tempfile
+from docx2pdf import convert
+
 
 class Processing():
-    """Класс для парсинга и чанкинга, полный пайплайн вызывается командной work()
-    возврощающая"""
-    def __init__(self, doc):
-        self.doc = doc
+    def __init__(self, doc_path):
+        self.original_path = doc_path
+        self.pdf_path = None  # будет заполнен после конвертации
+
+    def _convert_docx_to_pdf(self, docx_path):
+        """Конвертирует DOCX в PDF и возвращает путь к PDF."""
+        # Создаём временный файл с расширением .pdf
+        temp_pdf = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+        temp_pdf.close()
+        pdf_path = temp_pdf.name
+        # Конвертируем
+        convert(docx_path, pdf_path)
+        return pdf_path
 
     def parsing(self):
+        # Если файл .docx – конвертируем в PDF
+        if not os.path.exists(self.original_path):
+                raise FileNotFoundError(f"Файл не найден: {self.original_path}")
+
+        if self.original_path.lower().endswith('.docx'):
+            self.pdf_path = self._convert_docx_to_pdf(self.original_path)
+            file_to_parse = self.pdf_path
+        else:
+            file_to_parse = self.original_path
+
         elements = partition(
-            filename=self.doc,
+            filename=file_to_parse,
             strategy='auto',
             languages=['rus', 'eng']
         )
-
         result = []
         for el in elements:
             # Пропускаем служебные элементы (колонтитулы, разрывы страниц)
@@ -48,81 +71,61 @@ class Processing():
                 element_data["metadata"]["text_as_html"] = el.metadata.text_as_html
             
             result.append(element_data)
+
+        if self.pdf_path and os.path.exists(self.pdf_path):
+            os.unlink(self.pdf_path)
+            self.pdf_path = None
         
         return result
 
-    def chunking(self):
+    def chunking(self, text = None):
 
-        # 1. Получаем элементы
-        parsed_elements = self.parsing()
-        
-        # 2. Фильтруем только NarrativeText и UncategorizedText
-        target_categories = ["NarrativeText", "UncategorizedText"]
-        filtered_texts = []
-        common_metadata = {}
-        
-        for el in parsed_elements:
-            if el["category"] in target_categories:
-                filtered_texts.append(el["text"])
-                if not common_metadata:
-                    common_metadata = el["metadata"].copy()
-        
-        if not filtered_texts:
-            print("⚠️ Нет NarrativeText или UncategorizedText для чанкинга.")
-            return []
-        
-        # 3. Объединяем тексты
-        combined_text = "\n\n".join(filtered_texts)
-        
-        # 4. Создаём Document
-        doc = Document(
-            text=combined_text,
-            metadata=common_metadata
-        )
-        
-        # 5. Эмбеддинг-модель
         embed_model = HuggingFaceEmbedding(
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
         
-        # 6. Семантический сплиттер
         splitter = SemanticSplitterNodeParser(
             embed_model=embed_model,
             buffer_size=1,
-            breakpoint_percentile_threshold=50, #ПРОТЕСТИРОВАТЬ РАЗНУЮ ВЕЛИЧИНУ
+            breakpoint_percentile_threshold=75, #ПРОТЕСТИРОВАТЬ РАЗНУЮ ВЕЛИЧИНУ
             include_metadata=True,
         )
-        
-        # 7. Получаем чанки
-        nodes = splitter.get_nodes_from_documents([doc])
-        
-        # # ----- ВЫВОД РЕЗУЛЬТАТОВ В КОНСОЛЬ -----
-        # print(f"\n📄 Документ: {common_metadata.get('filename', 'неизвестно')}")
-        # print(f"✅ Создано чанков: {len(nodes)}")
-        
-        # if not nodes:
-        #     print("Чанки не созданы.")
-        #     return nodes
-        
-        # # Выводим первые 5 чанков (или все, если их ≤5)
-        # show_count = min(5, len(nodes))
-        # print(f"\n--- Показываем первые {show_count} чанков ---\n")
-        
-        # for i in range(show_count):
-        #     node = nodes[i]
-        #     print(f"Чанк #{i+1}:")
-        #     print(f"  Длина: {len(node.text)} символов")
-        #     print(f"  Метаданные: {node.metadata}")
-        #     print(f"  Текст:\n{node.text[:300]}{'...' if len(node.text) > 300 else ''}")
-        #     print("-" * 50)
-        
-        # if len(nodes) > 5:
-        #     print(f"... и ещё {len(nodes) - 5} чанков (всего {len(nodes)}).")
-        
-        return nodes
+
+        if text is not None:
+            doc = Document(text=text, metadata={"source": "HYDE"})  # можно добавить метку
+            nodes = splitter.get_nodes_from_documents([doc])
+            return nodes
+
+        parsed_elements = self.parsing()
+
+        common_metadata = {
+        k: v for k, v in parsed_elements[0]['metadata'].items()
+        if k != 'page_number'
+        }
+
+        pages = defaultdict(str)
+        for el in parsed_elements:
+            pages[str(el['metadata']['page_number'])] += el['text']
+
+
+        all_nodes = []
+        for page in pages:
+            doc = Document(
+                text = pages[page],
+                metadata = {**common_metadata, 'page_number': page}
+            )
+
+            nodes = splitter.get_nodes_from_documents([doc])
+            all_nodes.extend(nodes)
+                
+        return all_nodes
 
         
-p = Processing('test/text.docx')
-p.parsing()
-print(p.chunking())
-        
+
+base_dir = os.path.dirname(os.path.abspath(__file__))  # папка, где лежит скрипт
+file_path = os.path.join(base_dir, 'test', 'text.docx')
+p = Processing(file_path)
+nodes = p.chunking()  # или p.chunking(threshold=90)
+for node in nodes[:3]:
+    print(f"Страница: {node.metadata.get('page_number')}")
+    print(f"Текст: {node.text[:150]}...")

@@ -39,22 +39,26 @@ class Agent:
         self.messages = [{"role": "system", "content": system_prompt}]
 
     def response(self, text, context):
-        self.messages.append({"role": "user", "content": "[Context Start]" + "(" + context + ")" + "[Context End]" + text})
+        # Если context — список, объединяем его в одну строку
+        if isinstance(context, list):
+            context = "\n\n".join(context)  # разделяем абзацы для читаемости
+
+        self.messages.append({
+            "role": "user",
+            "content": f"[Context Start]\n({context})\n[Context End]\n{text}"
+        })
 
         self._trim_history()
 
         response = self.client.chat.completions.create(
-            model="qwen2.5-coder-7b-instruct",  
+            model="qwen2.5-coder-7b-instruct",
             messages=self.messages,
             temperature=0.1,
             max_tokens=512,
         )
 
         assistant_reply = response.choices[0].message.content
-
-        # Добавляем ответ ассистента в историю
         self.messages.append({"role": "assistant", "content": assistant_reply})
-
         return assistant_reply
 
     def _trim_history(self):
@@ -76,11 +80,3 @@ class Agent:
         Полностью сбрасываем историю, оставляем только системное сообщение.
         """
         self.messages = [{"role": "system", "content": self.system_prompt}]
-
-    def set_system_prompt(self, new_prompt):
-        """
-        Меняем системный промпт. При этом история диалога сбрасывается,
-        чтобы новый промпт применялся чисто.
-        """
-        self.system_prompt = new_prompt
-        self.clear_memory()

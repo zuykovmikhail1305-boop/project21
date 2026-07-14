@@ -60,7 +60,7 @@ class Embedding:
             print(f"Сохранено {min(i+batch_size, total)} из {total}")
         print(f"✅ Все {total} точек сохранены в коллекцию '{collection_name}'")
 
-    def search_query(self, query, collection_name="my_docs", limit=1):
+    def search_query(self, query, collection_name="my_docs", limit=1, return_text_only=False):
         query_vector = self.encode(query)
         search_payload = {
             "vector": query_vector,
@@ -75,4 +75,7 @@ class Embedding:
             raise Exception(f"Search failed: {resp.text}")
         data = resp.json()
         results = data.get("result", [])
-        return [{"score": hit["score"], "payload": hit["payload"]} for hit in results]
+        if return_text_only:
+            return [hit["payload"]["text"] for hit in results]
+        else:
+            return [{"score": hit["score"], "payload": hit["payload"]} for hit in results]

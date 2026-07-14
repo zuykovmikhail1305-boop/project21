@@ -62,7 +62,7 @@ class Find_answer():
         # return metch
         emb = Embedding()
         hyde = self.HYDE(self.text)
-        return emb.search_query(hyde)
+        return emb.search_query(hyde, return_text_only=True)
     
     def reranked(self):
         pass

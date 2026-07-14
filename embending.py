@@ -1,92 +1,78 @@
-from qdrant_client import QdrantClient, models
-from sentence_transformers import SentenceTransformer
+import requests
 import uuid
-
+from sentence_transformers import SentenceTransformer
 
 class Embedding:
-
-    _client = None
-
-    @classmethod
-    def get_client(cls, path="./qdrant_storage"):
-        if cls._client is None:
-            cls._client = QdrantClient(path=path)
-        return cls._client
-
-    def __init__(self):
+    def __init__(self, qdrant_url="http://localhost:6333"):
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.qdrant_url = qdrant_url
 
     def encode(self, text):
         return self.model.encode(text).tolist()
 
     def _extract_text_and_metadata(self, item):
-        """
-        Извлекает текст и метаданные из элемента,
-        который может быть словарём или объектом Node (LlamaIndex).
-        """
         if isinstance(item, dict):
             return item.get('text', ''), item.get('metadata', {})
         else:
-            # Предполагаем, что это объект с атрибутами text и metadata
             text = getattr(item, 'text', '')
             metadata = getattr(item, 'metadata', {})
             return text, metadata
 
     def save_to_qdrant(self, data, collection_name="my_docs", batch_size=64):
-        # 1. Преобразуем data в единый формат — список словарей с ключами 'text', 'metadata', 'vector'
-        processed_data = []
+        # Генерируем векторы и формируем точки
+        points = []
         for item in data:
             text, metadata = self._extract_text_and_metadata(item)
             vector = self.encode(text)
-            processed_data.append({
-                'text': text,
-                'metadata': metadata,
-                'vector': vector
+            point_id = str(uuid.uuid4())
+            points.append({
+                "id": point_id,
+                "vector": vector,
+                "payload": {"text": text, "metadata": metadata}
             })
 
-        client = self.get_client()
-
-        # 2. Создаём коллекцию, если её нет
-        if not client.collection_exists(collection_name):
-            client.create_collection(
-                collection_name=collection_name,
-                vectors_config=models.VectorParams(
-                    size=self.model.get_sentence_embedding_dimension(),
-                    distance=models.Distance.COSINE
-                )
-            )
-
-        # 3. Формируем точки для загрузки
-        points = []
-        for item in processed_data:
-            point_id = str(uuid.uuid4())
-            payload = {
-                "text": item['text'],
-                "metadata": item['metadata']
+        # Проверяем/создаём коллекцию
+        collection_url = f"{self.qdrant_url}/collections/{collection_name}"
+        resp = requests.get(collection_url)
+        if resp.status_code == 404:
+            create_payload = {
+                "vectors": {
+                    "size": 384,
+                    "distance": "Cosine"
+                }
             }
-            points.append(
-                models.PointStruct(
-                    id=point_id,
-                    vector=item['vector'],
-                    payload=payload
-                )
-            )
+            resp = requests.put(collection_url, json=create_payload)
+            if resp.status_code != 200:
+                raise Exception(f"Failed to create collection: {resp.text}")
+        elif resp.status_code != 200:
+            raise Exception(f"Unexpected response: {resp.text}")
 
-        # 4. Загружаем пакетами
+        # Загружаем точки пакетами
         total = len(points)
         for i in range(0, total, batch_size):
             batch = points[i:i+batch_size]
-            client.upsert(collection_name=collection_name, points=batch)
-        print(f"Сохранено {total} точек в коллекцию '{collection_name}'")
+            resp = requests.put(
+                f"{collection_url}/points",
+                json={"points": batch}
+            )
+            if resp.status_code != 200:
+                raise Exception(f"Failed to upsert points: {resp.text}")
+            print(f"Сохранено {min(i+batch_size, total)} из {total}")
+        print(f"✅ Все {total} точек сохранены в коллекцию '{collection_name}'")
 
-
-    def search(self, query, collection_name="my_docs", limit=20):
-        client = self.get_client()
+    def search_query(self, query, collection_name="my_docs", limit=1):
         query_vector = self.encode(query)
-        results = client.search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            limit=limit,
-            with_payload=True
+        search_payload = {
+            "vector": query_vector,
+            "limit": limit,
+            "with_payload": True
+        }
+        resp = requests.post(
+            f"{self.qdrant_url}/collections/{collection_name}/points/search",
+            json=search_payload
         )
-        return [{"score": hit.score, "payload": hit.payload} for hit in results]
+        if resp.status_code != 200:
+            raise Exception(f"Search failed: {resp.text}")
+        data = resp.json()
+        results = data.get("result", [])
+        return [{"score": hit["score"], "payload": hit["payload"]} for hit in results]

@@ -1,6 +1,7 @@
 from unstructured.partition.auto import partition
 from unstructured.cleaners.core import clean_extra_whitespace
-from llama_index.core import Document, Settings
+from llama_index.core import Document
+from llama_index.core.settings import Settings
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 import re
@@ -122,10 +123,10 @@ class Processing():
 
         
 
-base_dir = os.path.dirname(os.path.abspath(__file__))  # папка, где лежит скрипт
-file_path = os.path.join(base_dir, 'test', 'text.docx')
-p = Processing(file_path)
-nodes = p.chunking()  # или p.chunking(threshold=90)
-for node in nodes[:3]:
-    print(f"Страница: {node.metadata.get('page_number')}")
-    print(f"Текст: {node.text[:150]}...")
+# base_dir = os.path.dirname(os.path.abspath(__file__))  # папка, где лежит скрипт
+# file_path = os.path.join(base_dir, 'test', 'text.docx')
+# p = Processing(file_path)
+# nodes = p.chunking()  # или p.chunking(threshold=90)
+# for node in nodes[:3]:
+#     print(f"Страница: {node.metadata.get('page_number')}")
+#     print(f"Текст: {node.text[:150]}...")

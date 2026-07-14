@@ -50,16 +50,20 @@ class Find_answer():
         return response.choices[0].message.content
     
     def find_answer(self):
+        # hyde = self.HYDE(self.text)
+        # p = Processing('')
+        # data = p.chunking(text=hyde)
+
+        # emb = Embedding()
+        # metch = []
+        # for item in data:
+        #     metch.append(emb.search_query())
+
+        # return metch
+        emb = Embedding()
         hyde = self.HYDE(self.text)
-        data = Processing.chunking(hyde)
-
-        metch = []
-
-        for item in data:
-            metch.append(Embedding.search(item['text']))
-
-        return metch
-
+        return emb.search_query(hyde)
+    
     def reranked(self):
         pass
         

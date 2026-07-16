@@ -88,7 +88,7 @@ class Processing():
         splitter = SemanticSplitterNodeParser(
             embed_model=embed_model,
             buffer_size=1,
-            breakpoint_percentile_threshold=75, #ПРОТЕСТИРОВАТЬ РАЗНУЮ ВЕЛИЧИНУ
+            breakpoint_percentile_threshold=25, #ПРОТЕСТИРОВАТЬ РАЗНУЮ ВЕЛИЧИНУ
             include_metadata=True,
         )
 

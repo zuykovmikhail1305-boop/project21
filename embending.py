@@ -79,3 +79,57 @@ class Embedding:
             return [hit["payload"]["text"] for hit in results]
         else:
             return [{"score": hit["score"], "payload": hit["payload"]} for hit in results]
+
+    def delete_collection(self, collection_name="my_docs"):
+        """
+        Полностью удаляет коллекцию из Qdrant.
+        После этого все данные будут потеряны.
+        """
+        collection_url = f"{self.qdrant_url}/collections/{collection_name}"
+        resp = requests.delete(collection_url)
+        if resp.status_code == 200:
+            print(f"✅ Коллекция '{collection_name}' успешно удалена.")
+        elif resp.status_code == 404:
+            print(f"⚠️ Коллекция '{collection_name}' не найдена, ничего не делаем.")
+        else:
+            raise Exception(f"Ошибка при удалении коллекции: {resp.text}")
+
+    def clear_points(self, collection_name="my_docs", batch_size=64):
+        """
+        Удаляет все точки из коллекции, но сохраняет саму коллекцию.
+        """
+        collection_url = f"{self.qdrant_url}/collections/{collection_name}"
+        # Проверяем, существует ли коллекция
+        resp = requests.get(collection_url)
+        if resp.status_code == 404:
+            print(f"⚠️ Коллекция '{collection_name}' не существует. Ничего не удаляем.")
+            return
+        elif resp.status_code != 200:
+            raise Exception(f"Не удалось получить информацию о коллекции: {resp.text}")
+
+        # Получаем все ID точек
+        scroll_url = f"{collection_url}/points/scroll"
+        scroll_payload = {"limit": batch_size, "with_payload": False}
+        points_deleted = 0
+        while True:
+            resp = requests.post(scroll_url, json=scroll_payload)
+            if resp.status_code != 200:
+                raise Exception(f"Ошибка при получении точек: {resp.text}")
+            data = resp.json()
+            result = data.get("result", {})
+            points = result.get("points", [])
+            if not points:
+                break
+            point_ids = [p["id"] for p in points]
+            # Удаляем эти точки
+            delete_payload = {"points": point_ids}
+            delete_resp = requests.post(f"{collection_url}/points/delete", json=delete_payload)
+            if delete_resp.status_code != 200:
+                raise Exception(f"Ошибка при удалении точек: {delete_resp.text}")
+            points_deleted += len(point_ids)
+            # Обновляем offset для следующей пачки
+            scroll_payload["offset"] = result.get("next_page_offset")
+            if not scroll_payload["offset"]:
+                break
+            print(f"Удалено {points_deleted} точек...")
+        print(f"✅ Все точки удалены. Всего удалено: {points_deleted}")

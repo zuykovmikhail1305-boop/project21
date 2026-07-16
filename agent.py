@@ -1,82 +1,113 @@
 from openai import OpenAI
 
+# - **Указывай источники** в квадратных скобках после каждого факта. Используй формат: [источник: <имя_файла>, стр. <номер_страницы>].
+#   Пример: [источник: годовой_отчёт.pdf, стр. 5].
+
 class Agent:
     def __init__(self, max_context_messages=20):
         self.client = OpenAI(
             base_url="http://localhost:1234/v1",
-            api_key="util"          
+            api_key="util"
         )
         self.max_context_messages = max_context_messages
-        system_prompt="""You are a precise, helpful assistant that answers questions using only the information found in the provided context.
-        You never rely on your own knowledge or training data unless the context explicitly supports it.
+        self.system_prompt = """Ты — точный и полезный ассистент, который отвечает на вопросы, используя только информацию из предоставленного контекста.
+Ты никогда не полагаешься на свои собственные знания или обучающие данные, если контекст явно их не подтверждает.
 
-        Instructions
-        Read the context carefully. The user will provide a set of retrieved documents or snippets. They will be delimited by [Context Start] and [Context End].
+Инструкции:
+- Внимательно читай контекст. Пользователь предоставляет набор извлечённых документов или фрагментов. Каждый фрагмент предваряется указанием источника (имя файла и номер страницы).
+- Отвечай строго на основе этого контекста. Если ответ полностью подтверждается контекстом, дай чёткий и лаконичный ответ.
+- Если в контексте недостаточно информации, скажи прямо: «Предоставленный контекст не содержит достаточно информации для ответа на этот вопрос.»
+- Не додумывай, не спекулируй и не используй внешние знания.
+- Если в контексте есть противоречивая информация, укажи на противоречие и перечисли конфликтующие источники.
+- Сохраняй доброжелательный, вежливый и прямой тон.
+- Для уточняющих вопросов продолжай полагаться исключительно на последний предоставленный контекст, если новый не был специально передан.
 
-        Answer based strictly on that context. If the answer is fully supported by the context, give a clear, concise response.
+Формат контекста:
+[Начало контекста]
+Источник: имя_файла (стр. X)
+текст фрагмента
+Источник: имя_файла2 (стр. Y)
+текст фрагмента
+...
+[Конец контекста]
 
-        If the context lacks sufficient information, say so explicitly: “The provided context does not contain enough information to answer this question.”
-        Do not guess, speculate, or use outside knowledge.
+Вопрос: ...
+Помни: твоя главная цель — точное следование контексту. Точность и прозрачность источников важнее полноты. Если сомневаешься — признай это."""
+        self.messages = [{"role": "system", "content": self.system_prompt}]
+        self.last_context = []  # для хранения последнего использованного контекста
 
-        Cite your sources. After each factual claim, include a citation in brackets pointing to the relevant part of the context. Use the format [source: <identifier or snippet number>].
-        Example: [source: doc3, paragraph 2] or [source: snippet #4].
-        If the context includes identifiers (like document titles, URLs, chunk IDs), use those.
+    def response(self, text, context, return_sources=True):
+        """
+        Отправляет запрос модели с контекстом.
+        context: список словарей с ключами 'text' и 'metadata' (как возвращает search_query).
+        return_sources: если True, возвращает кортеж (answer, sources).
+        """
+        # Форматируем контекст с источниками
+        formatted_chunks = []
+        sources = []
+        for item in context:
+            if isinstance(item, dict):
+                chunk_text = item.get('text', '')
+                metadata = item.get('metadata', {})
+                filename = metadata.get('filename', 'неизвестный документ')
+                page = metadata.get('page_number', 'неизвестная страница')
+                sources.append({
+                    "text": chunk_text,
+                    "filename": filename,
+                    "page": page,
+                    "metadata": metadata
+                })
+                formatted_chunks.append(f"Источник: {filename} (стр. {page})\n{chunk_text}")
+            else:
+                formatted_chunks.append(str(item))
+                sources.append({"text": str(item), "filename": None, "page": None})
 
-        If the context contains contradictory information, point out the contradiction and list the conflicting sources.
+        context_str = "\n\n".join(formatted_chunks) if formatted_chunks else ""
 
-        Maintain a helpful tone. Be polite, direct, and avoid unnecessary elaboration. Answer the exact question asked.
-
-        For follow-up questions, continue to rely exclusively on the last provided context unless new context is explicitly supplied.
-        Context format
-        Context will be provided inside the user message like this:
-        [Context Start]
-        (context)
-        [Context End]
-
-        Question: ...
-        Remember
-        Your primary goal is faithfulness to the provided context. Accuracy and source transparency are more important than completeness. If in doubt, admit the limitation."""
-        self.messages = [{"role": "system", "content": system_prompt}]
-
-    def response(self, text, context):
-        # Если context — список, объединяем его в одну строку
-        if isinstance(context, list):
-            context = "\n\n".join(context)  # разделяем абзацы для читаемости
-
+        # Добавляем сообщение пользователя на русском
         self.messages.append({
             "role": "user",
-            "content": f"[Context Start]\n({context})\n[Context End]\n{text}"
+            "content": f"[Начало контекста]\n{context_str}\n[Конец контекста]\n\nВопрос: {text}"
         })
 
         self._trim_history()
 
+        # Запрос к LLM
         response = self.client.chat.completions.create(
             model="qwen2.5-coder-7b-instruct",
             messages=self.messages,
             temperature=0.1,
-            max_tokens=512,
+            max_tokens=4096,
         )
 
         assistant_reply = response.choices[0].message.content
         self.messages.append({"role": "assistant", "content": assistant_reply})
-        return assistant_reply
+
+        self.last_context = sources
+
+        if return_sources:
+            return assistant_reply, sources
+        else:
+            return assistant_reply
 
     def _trim_history(self):
-        """
-        Оставляем системный промпт и последние max_context_messages пар (user+assistant).
-        Если история превышает лимит, удаляем старые сообщения.
-        """
         system_msg = self.messages[0]
         history = self.messages[1:]
-
         max_history_msgs = self.max_context_messages * 2
         if len(history) > max_history_msgs:
             history = history[-max_history_msgs:]
-
         self.messages = [system_msg] + history
 
     def clear_memory(self):
-        """
-        Полностью сбрасываем историю, оставляем только системное сообщение.
-        """
         self.messages = [{"role": "system", "content": self.system_prompt}]
+
+    def print_sources(self, sources):
+        """Выводит использованные источники в читаемом виде."""
+        if not sources:
+            print("Нет источников.")
+            return
+        print("\n--- Использованные источники ---")
+        for i, src in enumerate(sources, 1):
+            print(f"{i}. Файл: {src.get('filename', 'неизвестно')}, стр. {src.get('page', 'неизвестно')}")
+            print(f"   Текст: {src['text'][:200]}...")
+        print("--------------------------------\n")

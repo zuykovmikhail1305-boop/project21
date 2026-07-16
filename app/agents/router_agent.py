@@ -13,8 +13,8 @@ from app.core import config
 class RouteDecision(BaseModel):
     """Структурированный ответ роутера."""
     route: str = Field(
-        description="Маршрут: search, summarize, analyze, или general",
-        pattern=r"^(search|summarize|analyze|general)$",
+        description="Маршрут: search, summarize, analyze, generate, или general",
+        pattern=r"^(search|summarize|analyze|generate|general)$",
     )
     confidence: float = Field(
         description="Уверенность в решении от 0.0 до 1.0",
@@ -34,6 +34,8 @@ ROUTER_PROMPT = ChatPromptTemplate.from_messages([
         "- search: пользователь ищет конкретную информацию, факты, данные в документах\n"
         "- summarize: пользователь хочет получить краткое содержание или саммари документа\n"
         "- analyze: пользователь хочет аналитику, теги, связи, дубликаты\n"
+        "- generate: пользователь хочет создать документ, отчёт, презентацию, PDF, "
+        "дашборд на основе имеющихся данных\n"
         "- general: общий вопрос, приветствие, не связанное с документами",
     ),
     ("human", "{query}"),
@@ -47,7 +49,7 @@ class RouterAgent:
         self.llm = ChatOpenAI(
             model=config.OPENAI_MODEL,
             temperature=0.0,
-            api_key=config.OPENAI_API_KEY,
+            api_key=config.OPENAI_API_KEY,  # type: ignore[arg-type]
             base_url=config.OPENAI_API_BASE,
         )
         self.chain = ROUTER_PROMPT | self.llm.with_structured_output(RouteDecision)
@@ -62,4 +64,7 @@ class RouterAgent:
             RouteDecision с полями route, confidence, reasoning.
         """
         result = await self.chain.ainvoke({"query": query})
-        return result
+        # with_structured_output возвращает Pydantic модель (type checker видит dict)
+        if isinstance(result, dict):
+            return RouteDecision(**result)
+        return result  # type: ignore[return-value]

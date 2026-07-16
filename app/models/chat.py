@@ -52,3 +52,4 @@ class ChatMessage(Base):
 
     # Связи
     session = relationship("ChatSession", back_populates="messages")
+    artifacts = relationship("Artifact", backref="source_message", foreign_keys="Artifact.source_message_id")

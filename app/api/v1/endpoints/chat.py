@@ -200,6 +200,16 @@ async def chat_stream(
                 "data": json.dumps({"route": route, "error": error}),
             }
 
+            # Stream artifact events if present
+            artifact_result = result.get("artifact_result")
+            if artifact_result:
+                artifact_events = artifact_result.get("events", [])
+                for event in artifact_events:
+                    yield {
+                        "event": event["event"],
+                        "data": json.dumps(event["data"]),
+                    }
+
             # Stream answer in chunks for real-time feel
             chunk_size = 50
             for i in range(0, len(final_answer), chunk_size):

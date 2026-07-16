@@ -9,6 +9,7 @@ from app.models.document import (
     DocumentStatus,
 )
 from app.models.chat import ChatSession, ChatMessage, SessionStatus
+from app.models.artifact import Artifact, ArtifactStatus
 
 __all__ = [
     "User",
@@ -23,4 +24,6 @@ __all__ = [
     "ChatSession",
     "ChatMessage",
     "SessionStatus",
+    "Artifact",
+    "ArtifactStatus",
 ]

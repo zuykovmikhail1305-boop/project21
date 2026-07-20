@@ -1,47 +1,31 @@
-from processing import Processing
-from embending import Embedding
-from find_answer import Find_answer
+import pickle
+from find import Find_answer
 from agent import Agent
 
-# p = Processing('test/text.docx')
-# data = p.chunking()
+# Загружаем BM25 индекс (если уже построен) или строим заново
+try:
+    with open("bm25_index.pkl", "rb") as f:
+        bm25 = pickle.load(f)
+except FileNotFoundError:
+    # Если индекса нет, запускаем построение
+    from index_documents import index_all_documents
+    bm25 = index_all_documents("test")
+    with open("bm25_index.pkl", "wb") as f:
+        pickle.dump(bm25, f)
 
-# e = Embedding()
-# e.save_to_qdrant(data, collection_name='my_docs')
-
-# f = Find_answer('Что такое искусственный интеллект?')
-# print(f.find_answer())
-
-emb = Embedding()
-
-# # 1. Полностью удалить коллекцию (все данные)
-# emb.delete_collection("my_docs")
-
-# 2. Очистить точки, но оставить коллекцию
-# emb.clear_points("my_docs")
-
-# links = ['test/2025_12_26.pdf', 
-#         'test/o_tekushchey_situacii_v_rossiyskoy_ekonomike_itogi_2024_goda.pdf',
-#         'test/tekushhee-sostoyanie-rossijskoj-ekonomiki-i-prognoz-v-2020-2024-gg.-i-na-period-do-2035-g.pdf']
-
-# for link in links:
-#     p = Processing(link)
-#     data = p.chunking()
-#     emb = Embedding()
-#     emb.save_to_qdrant(data)
-
+agent = Agent(max_context_messages=10)
+print("Введите вопрос (или 'exit' для выхода):")
 while True:
-    query = input("Вы: ")
-    if query.lower() in ["exit", "quit"]:
+    query = input("\nВы: ")
+    if query.lower() in ["exit", "quit", "выход"]:
         break
 
-    finder = Find_answer(query)                         # список словарей с 'text' и 'metadata'
-    candidates = finder.find_answer()                     # получаем 10 кандидатов
-    best = finder.reranked(query, candidates, top_k=3) 
+    finder = Find_answer(query, bm25)
+    candidates = finder.find_answer(num_results=5)
+    # Можно применить реранжинг:
+    # candidates = finder.reranked(query, candidates, top_k=3)
 
-    agent = Agent()
-    answer, sources = agent.response(query, best, return_sources=True)
-
+    # Формируем ответ
+    answer, sources = agent.response(query, candidates, return_sources=True)
     print(f"Агент: {answer}")
-    agent.print_sources(sources)  # выведет информацию об источниках
-
+    agent.print_sources(sources)

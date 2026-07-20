@@ -29,7 +29,7 @@ class Processing():
     def parsing(self):
         # Если файл .docx – конвертируем в PDF
         if not os.path.exists(self.original_path):
-                raise FileNotFoundError(f"Файл не найден: {self.original_path}")
+            raise FileNotFoundError(f"Файл не найден: {self.original_path}")
 
         if self.original_path.lower().endswith('.docx'):
             self.pdf_path = self._convert_docx_to_pdf(self.original_path)
@@ -47,15 +47,15 @@ class Processing():
             # Пропускаем служебные элементы (колонтитулы, разрывы страниц)
             if el.category in ["Header", "Footer", "PageBreak"]:
                 continue
-            
+
             # Очищаем текст от лишних пробелов и нечитаемых символов
             clean_text = clean_extra_whitespace(el.text)
             clean_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', clean_text)
-            
+
             # Пропускаем пустые элементы
             if not clean_text.strip():
                 continue
-            
+
             # Формируем словарь для элемента
             element_data = {
                 "category": el.category,
@@ -67,28 +67,28 @@ class Processing():
                     "languages": el.metadata.languages if hasattr(el.metadata, 'languages') else None,
                 }
             }
-            
+
             if el.category == "Table" and hasattr(el.metadata, 'text_as_html'):
                 element_data["metadata"]["text_as_html"] = el.metadata.text_as_html
-            
+
             result.append(element_data)
 
         if self.pdf_path and os.path.exists(self.pdf_path):
             os.unlink(self.pdf_path)
             self.pdf_path = None
-        
+
         return result
 
-    def chunking(self, text = None):
+    def chunking(self, text=None):
 
         embed_model = HuggingFaceEmbedding(
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
-        
+
         splitter = SemanticSplitterNodeParser(
             embed_model=embed_model,
             buffer_size=1,
-            breakpoint_percentile_threshold=25, #ПРОТЕСТИРОВАТЬ РАЗНУЮ ВЕЛИЧИНУ
+            breakpoint_percentile_threshold=25,  # ПРОТЕСТИРОВАТЬ РАЗНУЮ ВЕЛИЧИНУ
             include_metadata=True,
         )
 
@@ -100,28 +100,26 @@ class Processing():
         parsed_elements = self.parsing()
 
         common_metadata = {
-        k: v for k, v in parsed_elements[0]['metadata'].items()
-        if k != 'page_number'
+            k: v for k, v in parsed_elements[0]['metadata'].items()
+            if k != 'page_number'
         }
 
         pages = defaultdict(str)
         for el in parsed_elements:
             pages[str(el['metadata']['page_number'])] += el['text']
 
-
         all_nodes = []
         for page in pages:
             doc = Document(
-                text = pages[page],
-                metadata = {**common_metadata, 'page_number': page}
+                text=pages[page],
+                metadata={**common_metadata, 'page_number': page}
             )
 
             nodes = splitter.get_nodes_from_documents([doc])
             all_nodes.extend(nodes)
-                
+
         return all_nodes
 
-        
 
 # base_dir = os.path.dirname(os.path.abspath(__file__))  # папка, где лежит скрипт
 # file_path = os.path.join(base_dir, 'test', 'text.docx')

@@ -2,30 +2,37 @@ import pickle
 from find import Find_answer
 from agent import Agent
 
-# Загружаем BM25 индекс (если уже построен) или строим заново
-try:
-    with open("bm25_index.pkl", "rb") as f:
-        bm25 = pickle.load(f)
-except FileNotFoundError:
-    # Если индекса нет, запускаем построение
-    from index_documents import index_all_documents
-    bm25 = index_all_documents("test")
-    with open("bm25_index.pkl", "wb") as f:
-        pickle.dump(bm25, f)
+# Загружаем BM25 индекс
+with open("bm25_index.pkl", "rb") as f:
+    bm25 = pickle.load(f)
 
 agent = Agent(max_context_messages=10)
-print("Введите вопрос (или 'exit' для выхода):")
+history = []  # история диалога для Find_answer
+
+print("Введите вопрос (или 'exit' для выхода, 'clear' для очистки истории):")
 while True:
     query = input("\nВы: ")
     if query.lower() in ["exit", "quit", "выход"]:
         break
+    if query.lower() == "clear":
+        history = []
+        print("История очищена.")
+        continue
 
-    finder = Find_answer(query, bm25)
-    candidates = finder.find_answer(num_results=5)
-    # Можно применить реранжинг:
-    # candidates = finder.reranked(query, candidates, top_k=3)
+    # Создаём экземпляр Find_answer с текущим вопросом и историей
+    finder = Find_answer(query, bm25, history=history)
+    candidates = finder.find_answer(num_results=10)
 
-    # Формируем ответ
-    answer, sources = agent.response(query, candidates, return_sources=True)
-    print(f"Агент: {answer}")
-    agent.print_sources(sources)
+    if candidates:
+        # Опциональный реранжинг (берём топ-3)
+        best = finder.reranked(query, candidates, top_k=5)
+        # Генерируем ответ через агента
+        answer, sources = agent.response(query, best, return_sources=True)
+        print(f"Агент: {answer}")
+        agent.print_sources(sources)
+
+        # Обновляем историю (вопрос и ответ)
+        finder.update_history(query, answer)
+        history = finder.history
+    else:
+        print("Не найдено релевантных документов в базе.")

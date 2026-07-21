@@ -1,3 +1,4 @@
+import app.routes
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -6,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 
-from app.core.config import engine, Base, SessionLocal
+from app.core.config import Base, SessionLocal, _build_engine
 from app.models import *  # noqa: F401, F403 — регистрация всех моделей в Base.metadata
 from app.core.seed import seed_groups
 from app.api.v1.api import api_router
@@ -16,19 +17,29 @@ from app.routes import router as page_router, get_templates
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for FastAPI."""
-    # Startup
-    Base.metadata.create_all(bind=engine)
+    engine, local_session = _build_engine()
 
-    # Seed предопределённых групп (admins, users)
-    db = SessionLocal()
-    try:
-        seed_groups(db)
-    finally:
-        db.close()
+    if engine is not None and local_session is not None:
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception:
+            pass
+
+        db = local_session()
+        try:
+            seed_groups(db)
+        except Exception:
+            pass
+        finally:
+            db.close()
 
     yield
-    # Shutdown
-    Base.metadata.drop_all(bind=engine)
+
+    if engine is not None:
+        try:
+            Base.metadata.drop_all(bind=engine)
+        except Exception:
+            pass
 
 
 fastapi_app = FastAPI(title="CorpAI Intelligence", version="0.1.0", lifespan=lifespan)
@@ -47,6 +58,8 @@ fastapi_app.add_middleware(
 )
 
 # === Security Headers Middleware ===
+
+
 @fastapi_app.middleware("http")
 async def add_security_headers(request, call_next):
     response = await call_next(request)
@@ -67,7 +80,6 @@ fastapi_app.mount("/static", StaticFiles(directory=str(static_dir)), name="stati
 templates_dir = Path(__file__).parent / "app/templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 # Share templates instance with routes module
-import app.routes
 app.routes.templates = templates
 
 # === API Routes ===

@@ -1,6 +1,9 @@
 import pickle
 from find import Find_answer
 from agent import Agent
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Загружаем BM25 индекс
 with open("bm25_index.pkl", "rb") as f:
@@ -21,11 +24,11 @@ while True:
 
     # Создаём экземпляр Find_answer с текущим вопросом и историей
     finder = Find_answer(query, bm25, history=history)
-    candidates = finder.find_answer(num_results=10)
+    candidates = finder.find_answer()
 
     if candidates:
         # Опциональный реранжинг (берём топ-3)
-        best = finder.reranked(query, candidates, top_k=5)
+        best = finder.reranked(query, candidates)
         # Генерируем ответ через агента
         answer, sources = agent.response(query, best, return_sources=True)
         print(f"Агент: {answer}")

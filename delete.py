@@ -1,6 +1,7 @@
 from embending import Embedding
-
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 def delete_bm25_index(index_file="bm25_index.pkl"):
     """Удаляет файл с сохранённым BM25 индексом."""

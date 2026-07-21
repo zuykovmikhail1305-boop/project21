@@ -9,25 +9,26 @@ from collections import defaultdict
 import os
 import tempfile
 from docx2pdf import convert
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class Processing():
     def __init__(self, doc_path):
         self.original_path = doc_path
-        self.pdf_path = None  # будет заполнен после конвертации
+        self.pdf_path = None
+        # Читаем переменные окружения с дефолтными значениями
+        self.chunk_model = os.getenv("CHUNK_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        self.chunk_threshold = int(os.getenv("CHUNK_THRESHOLD", "75"))  # если есть переменная, иначе 75
 
     def _convert_docx_to_pdf(self, docx_path):
-        """Конвертирует DOCX в PDF и возвращает путь к PDF."""
-        # Создаём временный файл с расширением .pdf
         temp_pdf = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
         temp_pdf.close()
         pdf_path = temp_pdf.name
-        # Конвертируем
         convert(docx_path, pdf_path)
         return pdf_path
 
     def parsing(self):
-        # Если файл .docx – конвертируем в PDF
         if not os.path.exists(self.original_path):
             raise FileNotFoundError(f"Файл не найден: {self.original_path}")
 
@@ -44,19 +45,15 @@ class Processing():
         )
         result = []
         for el in elements:
-            # Пропускаем служебные элементы (колонтитулы, разрывы страниц)
             if el.category in ["Header", "Footer", "PageBreak"]:
                 continue
 
-            # Очищаем текст от лишних пробелов и нечитаемых символов
             clean_text = clean_extra_whitespace(el.text)
             clean_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', clean_text)
 
-            # Пропускаем пустые элементы
             if not clean_text.strip():
                 continue
 
-            # Формируем словарь для элемента
             element_data = {
                 "category": el.category,
                 "text": clean_text,
@@ -79,25 +76,29 @@ class Processing():
 
         return result
 
-    def chunking(self, text=None):
+    def chunking(self, text=None, threshold=None):
+        if threshold is None:
+            threshold = self.chunk_threshold
 
         embed_model = HuggingFaceEmbedding(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+            model_name=self.chunk_model
         )
 
         splitter = SemanticSplitterNodeParser(
             embed_model=embed_model,
             buffer_size=1,
-            breakpoint_percentile_threshold=25,  # ПРОТЕСТИРОВАТЬ РАЗНУЮ ВЕЛИЧИНУ
+            breakpoint_percentile_threshold=threshold,
             include_metadata=True,
         )
 
         if text is not None:
-            doc = Document(text=text, metadata={"source": "HYDE"})  # можно добавить метку
+            doc = Document(text=text, metadata={"source": "HYDE"})
             nodes = splitter.get_nodes_from_documents([doc])
             return nodes
 
         parsed_elements = self.parsing()
+        if not parsed_elements:
+            return []
 
         common_metadata = {
             k: v for k, v in parsed_elements[0]['metadata'].items()
@@ -106,25 +107,18 @@ class Processing():
 
         pages = defaultdict(str)
         for el in parsed_elements:
-            pages[str(el['metadata']['page_number'])] += el['text']
+            page = el['metadata'].get('page_number', 'unknown')
+            if page is None:
+                page = 'unknown'
+            pages[str(page)] += el['text'] + '\n\n'
 
         all_nodes = []
-        for page in pages:
+        for page, text in pages.items():
             doc = Document(
-                text=pages[page],
+                text=text,
                 metadata={**common_metadata, 'page_number': page}
             )
-
             nodes = splitter.get_nodes_from_documents([doc])
             all_nodes.extend(nodes)
 
         return all_nodes
-
-
-# base_dir = os.path.dirname(os.path.abspath(__file__))  # папка, где лежит скрипт
-# file_path = os.path.join(base_dir, 'test', 'text.docx')
-# p = Processing(file_path)
-# nodes = p.chunking()  # или p.chunking(threshold=90)
-# for node in nodes[:3]:
-#     print(f"Страница: {node.metadata.get('page_number')}")
-#     print(f"Текст: {node.text[:150]}...")

@@ -1,13 +1,19 @@
 from openai import OpenAI
-
-# - **Указывай источники** в квадратных скобках после каждого факта. Используй формат: [источник: <имя_файла>, стр. <номер_страницы>].
-#   Пример: [источник: годовой_отчёт.pdf, стр. 5].
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class Agent:
     def __init__(self, max_context_messages=20):
+        # Чтение переменных окружения с преобразованием типов и значениями по умолчанию
+        self.agent_api = os.getenv("AGENT_API", "http://localhost:1234/v1")
+        self.agent_model = os.getenv("AGENT_MODEL", "qwen2.5-coder-7b-instruct")
+        self.agent_temperature = float(os.getenv("AGENT_TEMPERATURE", "0.1"))
+        self.agent_max_tokens = int(os.getenv("AGENT_MAX_TOKEN", "8192"))
+
         self.client = OpenAI(
-            base_url="http://localhost:1234/v1",
+            base_url=self.agent_api,
             api_key="util"
         )
         self.max_context_messages = max_context_messages
@@ -21,9 +27,9 @@ class Agent:
 - Не додумывай, не спекулируй и не используй внешние знания.
 - Если в контексте есть противоречивая информация, укажи на противоречие и перечисли конфликтующие источники.
 - Сохраняй доброжелательный, вежливый и прямой тон.
--Если в контексте есть таблицы или числовые данные, извлеки из них нужные значения и используй их для ответа. Если можно вычислить ответ на основе данных (суммирование, сравнение), сделай это явно.
+- Если в контексте есть таблицы или числовые данные, извлеки из них нужные значения и используй их для ответа. Если можно вычислить ответ на основе данных (суммирование, сравнение), сделай это явно.
 - Для уточняющих вопросов продолжай полагаться исключительно на последний предоставленный контекст, если новый не был специально передан.
--Попытайся помаксимум взять информации из чанков, которые тебе предоставляются, допустим, если нет чёткой фразы, которой просит пользователь, то попробуй найти что-то похожее в контексте, который тебе передаётся на ответ.
+- Попытайся по максимуму взять информации из чанков, которые тебе предоставляются, допустим, если нет чёткой фразы, которой просит пользователь, то попробуй найти что-то похожее в контексте, который тебе передаётся на ответ.
 
 Формат контекста:
 [Начало контекста]
@@ -37,15 +43,9 @@ class Agent:
 Вопрос: ...
 Помни: твоя главная цель — точное следование контексту. Точность и прозрачность источников важнее полноты. Если сомневаешься — признай это."""
         self.messages = [{"role": "system", "content": self.system_prompt}]
-        self.last_context = []  # для хранения последнего использованного контекста
+        self.last_context = []
 
     def response(self, text, context, return_sources=True):
-        """
-        Отправляет запрос модели с контекстом.
-        context: список словарей с ключами 'text' и 'metadata' (как возвращает search_query).
-        return_sources: если True, возвращает кортеж (answer, sources).
-        """
-        # Форматируем контекст с источниками
         formatted_chunks = []
         sources = []
         for item in context:
@@ -67,7 +67,6 @@ class Agent:
 
         context_str = "\n\n".join(formatted_chunks) if formatted_chunks else ""
 
-        # Добавляем сообщение пользователя на русском
         self.messages.append({
             "role": "user",
             "content": f"[Начало контекста]\n{context_str}\n[Конец контекста]\n\nВопрос: {text}"
@@ -75,17 +74,15 @@ class Agent:
 
         self._trim_history()
 
-        # Запрос к LLM
         response = self.client.chat.completions.create(
-            model="qwen2.5-coder-7b-instruct",
+            model=self.agent_model,
             messages=self.messages,
-            temperature=0.1,
-            max_tokens=8192,
+            temperature=self.agent_temperature,
+            max_tokens=self.agent_max_tokens,
         )
 
         assistant_reply = response.choices[0].message.content
         self.messages.append({"role": "assistant", "content": assistant_reply})
-
         self.last_context = sources
 
         if return_sources:
@@ -105,7 +102,6 @@ class Agent:
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
     def print_sources(self, sources):
-        """Выводит использованные источники в читаемом виде."""
         if not sources:
             print("Нет источников.")
             return

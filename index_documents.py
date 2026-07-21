@@ -4,6 +4,9 @@ import glob
 from processing import Processing
 from embending import Embedding
 from bm25_search import BM25Search
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 def create_index(
     folder_path="test",

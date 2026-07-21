@@ -14,8 +14,11 @@ import os
 import shutil
 from typing import Optional
 
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+try:
+    from langchain_openai import ChatOpenAI
+except Exception:  # pragma: no cover - optional dependency guard
+    ChatOpenAI = None
+
 from pydantic import BaseModel, Field
 
 from app.core import config
@@ -72,69 +75,6 @@ class LLMMarkdownContent(BaseModel):
 
 # === Промпты ===
 
-PLANNING_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "Ты — архитектор корпоративных документов и презентаций. "
-        "На основе запроса пользователя и предоставленных данных составь план артефакта.\n\n"
-        "Правила:\n"
-        "1. Определи тип артефакта (pdf, pptx, docx, md, html) по запросу пользователя.\n"
-        "2. Выбери движок графиков:\n"
-        "   - matplotlib — для статичных отчётов, презентаций, PDF (по умолчанию)\n"
-        "   - plotly — ТОЛЬКО если пользователь ЯВНО запросил интерактивность, дашборд, кликабельные графики\n"
-        "3. Разбей содержание на логические разделы.\n"
-        "4. Определи, какие графики нужны и какие данные для них использовать.\n"
-        "5. Ответ должен быть на русском языке.\n\n"
-        "Данные из документов:\n{context}\n\n"
-        "Запрос пользователя: {query}",
-    ),
-    ("human", "Составь план артефакта."),
-])
-
-CHART_CODE_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "Ты — эксперт по визуализации данных. На основе описания графика и данных "
-        "напиши Python-код для его построения.\n\n"
-        "Правила:\n"
-        "- Используй библиотеку: {engine}\n"
-        "- Корпоративные цвета: основной синий #0052CC, акцентный серый #7A869A\n"
-        "- Шрифт: Arial, размер подписей 10pt\n"
-        "- График должен быть лаконичным, без лишней сетки\n"
-        "- Не используй кириллицу в коде — используй английские подписи\n"
-        "- Выдай ТОЛЬКО чистый код Python внутри поля code\n\n"
-        "Сохранение результата:\n"
-        "- Для matplotlib: plt.savefig(f'/tmp/chart_{chart_index}.png', dpi=300, bbox_inches='tight')\n"
-        "- Для plotly: fig.write_html(f'/tmp/chart_{chart_index}_interactive.html', include_plotlyjs='cdn')\n"
-        "             fig.write_image(f'/tmp/chart_{chart_index}_static.png', width=800, height=500, scale=2)\n\n"
-        "Данные для графика:\n{data}\n\n"
-        "Описание графика: {chart_description}",
-    ),
-    ("human", "Напиши код для графика '{chart_title}'."),
-])
-
-MARP_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "Ты — эксперт по созданию презентаций в Marp. На основе структуры артефакта "
-        "и путей к графикам создай Marp-совместимый Markdown.\n\n"
-        "Правила:\n"
-        "1. Начинай с YAML front-matter:\n"
-        "---\n"
-        "marp: true\ntheme: corporate-dark\npaginate: true\n---\n\n"
-        "2. Каждый раздел — отдельный слайд (---)\n"
-        "3. Для вставки графиков используй: ![w:600 h:400](/tmp/chart_N.png)\n"
-        "4. Для plotly (если есть interactive HTML): добавь ссылку под графиком\n"
-        "5. Используй div.columns для двухколоночных макетов\n"
-        "6. Текст должен быть на русском языке\n"
-        "7. Не используй кириллицу в путях к файлам\n\n"
-        "Структура артефакта:\n{structure}\n\n"
-        "Пути к графикам:\n{chart_paths}",
-    ),
-    ("human", "Создай Marp Markdown для артефакта '{title}'."),
-])
-
-
 class ArtifactGeneratorAgent:
     """Агент для генерации артефактов (PDF, презентации, отчёты)."""
 
@@ -148,17 +88,21 @@ class ArtifactGeneratorAgent:
         self.sandbox = sandbox or SubprocessSandbox()
         self.marp = marp or MarpRenderer()
 
-        self.llm = ChatOpenAI(
-            model=config.OPENAI_MODEL,
-            temperature=0.1,
-            api_key=config.OPENAI_API_KEY,  # type: ignore[arg-type]
-            base_url=config.OPENAI_API_BASE,
-        )
+        self.llm = None
+        self.planning_chain = None
+        self.chart_code_chain = None
+        self.marp_chain = None
 
-        # Цепочки с структурированным выводом
-        self.planning_chain = PLANNING_PROMPT | self.llm.with_structured_output(LLMArtifactPlan)
-        self.chart_code_chain = CHART_CODE_PROMPT | self.llm.with_structured_output(LLMChartCode)
-        self.marp_chain = MARP_PROMPT | self.llm.with_structured_output(LLMMarkdownContent)
+        if ChatOpenAI is not None:
+            try:
+                self.llm = ChatOpenAI(
+                    model=config.OPENAI_MODEL,
+                    temperature=0.1,
+                    api_key=config.OPENAI_API_KEY,  # type: ignore[arg-type]
+                    base_url=config.OPENAI_API_BASE,
+                )
+            except Exception:
+                self.llm = None
 
     async def generate(
         self,
@@ -188,6 +132,11 @@ class ArtifactGeneratorAgent:
             "error": None,
             "events": [],  # для SSE
         }
+
+        if self.llm is None:
+            result["status"] = "error"
+            result["error"] = "LLM provider is not available"
+            return result
 
         try:
             # === Фаза 1: Планирование ===
@@ -326,7 +275,7 @@ class ArtifactGeneratorAgent:
             charts.append(ChartPlan(
                 chart_index=i,
                 chart_type=c.get("chart_type", "bar"),
-                title=c.get("title", f"График {i+1}"),
+                title=c.get("title", f"График {i + 1}"),
                 data_source=c.get("data_source", ""),
                 engine=plan_data.get("chart_engine", "matplotlib"),
             ))
@@ -393,7 +342,8 @@ class ArtifactGeneratorAgent:
         })
 
         # with_structured_output возвращает Pydantic модель
-        md_data = llm_markdown if isinstance(llm_markdown, dict) else llm_markdown.model_dump()  # type: ignore[union-attr]
+        md_data = llm_markdown if isinstance(llm_markdown,
+                                             dict) else llm_markdown.model_dump()  # type: ignore[union-attr]
         markdown_content = md_data.get("markdown", "")
 
         return ArtifactContent(

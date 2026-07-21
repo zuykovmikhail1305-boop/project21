@@ -4,6 +4,7 @@
 и OpenAI-совместимый API для генерации текста.
 """
 
+import asyncio
 import json
 import time
 from typing import AsyncIterator, Optional
@@ -78,6 +79,59 @@ class GigaChatClient(LLMProvider):
         import uuid
         return str(uuid.uuid4())
 
+    async def _generate_text(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        stream: bool = False,
+        temperature: float = 0.1,
+        max_tokens: int = 2048,
+    ) -> str:
+        parts = []
+        async for chunk in self.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            stream=stream,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        ):
+            parts.append(chunk)
+        return "".join(parts)
+
+    def generate_sync(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        stream: bool = False,
+        temperature: float = 0.1,
+        max_tokens: int = 2048,
+    ) -> str:
+        """Синхронная обёртка для генерации текста."""
+        try:
+            return asyncio.run(
+                self._generate_text(
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    stream=stream,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            )
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(
+                    self._generate_text(
+                        prompt=prompt,
+                        system_prompt=system_prompt,
+                        stream=stream,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                    )
+                )
+            finally:
+                loop.close()
+
     async def generate(
         self,
         prompt: str,
@@ -144,6 +198,17 @@ class GigaChatClient(LLMProvider):
                     data = json.loads(result)
                     content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
                     yield content
+
+    def generate_embeddings_sync(self, text: str) -> list[float]:
+        """Синхронная обёртка для эмбеддингов."""
+        try:
+            return asyncio.run(self.generate_embeddings(text))
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(self.generate_embeddings(text))
+            finally:
+                loop.close()
 
     async def generate_embeddings(self, text: str) -> list[float]:
         """Generate embeddings using GigaChat API.

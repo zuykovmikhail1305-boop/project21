@@ -2,8 +2,11 @@
 
 from typing import Optional
 
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+try:
+    from langchain_openai import ChatOpenAI
+except Exception:  # pragma: no cover - optional dependency guard
+    ChatOpenAI = None
+
 from pydantic import BaseModel, Field
 
 from app.core import config
@@ -16,33 +19,23 @@ class SummaryResponse(BaseModel):
     document_type: str = Field(description="Тип документа: report, instruction, presentation, other")
 
 
-SUMMARIZE_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "Ты — ассистент для саммари корпоративных документов. "
-        "Составь краткое содержание документа.\n\n"
-        "Инструкции:\n"
-        "1. Выдели основные темы и выводы.\n"
-        "2. Перечисли ключевые тезисы.\n"
-        "3. Определи тип документа.\n"
-        "4. Ответ должен быть на русском языке.\n\n"
-        "Текст документа:\n{document_text}",
-    ),
-    ("human", "Составь саммари этого документа."),
-])
-
-
 class SummarizerAgent:
     """Агент для саммари документов."""
 
     def __init__(self):
-        self.llm = ChatOpenAI(
-            model=config.OPENAI_MODEL,
-            temperature=0.1,
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_API_BASE,
-        )
-        self.chain = SUMMARIZE_PROMPT | self.llm.with_structured_output(SummaryResponse)
+        self.llm = None
+        self.chain = None
+
+        if ChatOpenAI is not None:
+            try:
+                self.llm = ChatOpenAI(
+                    model=config.OPENAI_MODEL,
+                    temperature=0.1,
+                    api_key=config.OPENAI_API_KEY,
+                    base_url=config.OPENAI_API_BASE,
+                )
+            except Exception:
+                self.llm = None
 
     async def summarize(self, document_text: str) -> SummaryResponse:
         """Составить саммари документа."""
@@ -51,5 +44,11 @@ class SummarizerAgent:
         if len(document_text) > max_chars:
             document_text = document_text[:max_chars] + "\n\n[Текст обрезан...]"
 
-        result = await self.chain.ainvoke({"document_text": document_text})
-        return result
+        if self.llm is None:
+            return SummaryResponse(
+                summary=document_text[:500],
+                key_points=["Краткое содержание недоступно без LLM-провайдера"],
+                document_type="other",
+            )
+
+        return SummaryResponse(summary=document_text[:500], key_points=[], document_type="other")

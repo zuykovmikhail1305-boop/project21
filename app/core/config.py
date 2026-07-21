@@ -11,14 +11,33 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres@localhost:5432/project21"
 )
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = None
+SessionLocal = None
 Base = declarative_base()
+
+
+def _build_engine():
+    global engine, SessionLocal
+    if engine is not None and SessionLocal is not None:
+        return engine, SessionLocal
+
+    try:
+        engine = create_engine(DATABASE_URL)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    except Exception:
+        engine = None
+        SessionLocal = None
+
+    return engine, SessionLocal
 
 
 def get_db():
     """FastAPI dependency: get DB session"""
-    db = SessionLocal()
+    _, local_session = _build_engine()
+    if local_session is None:
+        raise RuntimeError("Database is not available. Install database driver or configure DATABASE_URL.")
+
+    db = local_session()
     try:
         yield db
     finally:

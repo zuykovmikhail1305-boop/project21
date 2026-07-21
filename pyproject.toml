@@ -67,6 +67,8 @@ dependencies = [
     "slowapi>=0.1.9",
     "python-jose[cryptography]>=3.3.0",
     "pwdlib[argon2]>=0.3.0",
+    "llama-index-embeddings-huggingface>=0.7.0",
+    "llama-index-core>=0.14.23",
 ]
 
 [tool.uv.workspace]

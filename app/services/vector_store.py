@@ -1,9 +1,14 @@
-"""Сервис для работы с Qdrant: hybrid search, ACL-фильтрация."""
+"""Сервис для работы с Qdrant: hybrid search, ACL-фильтрация и индексирование чанков."""
 
 from typing import Optional
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+
+try:
+    from qdrant_client.http.exceptions import UnexpectedStatusCode
+except ImportError:  # compatibility with older qdrant-client versions
+    UnexpectedStatusCode = Exception
 
 from app.core.config import QDRANT_COLLECTION_NAME
 from app.core.dependencies import get_qdrant_client
@@ -78,6 +83,53 @@ class VectorStore:
             user_groups=user_groups,
             top_k=top_k,
         )
+
+    def upsert_points(
+        self,
+        points: list[dict],
+        collection_name: Optional[str] = None,
+        vector_size: Optional[int] = None,
+    ) -> None:
+        """Добавить готовые точки в Qdrant."""
+        collection_name = collection_name or QDRANT_COLLECTION_NAME
+        self._ensure_collection(collection_name=collection_name, vector_size=vector_size)
+
+        qdrant_points = []
+        for point in points:
+            qdrant_points.append(
+                models.PointStruct(
+                    id=point["id"],
+                    vector=point["vector"],
+                    payload=point["payload"],
+                )
+            )
+
+        self.client.upsert(
+            collection_name=collection_name,
+            wait=True,
+            points=qdrant_points,
+        )
+
+    def _ensure_collection(
+        self,
+        collection_name: Optional[str] = None,
+        vector_size: Optional[int] = None,
+    ) -> None:
+        """Создать коллекцию, если она ещё не существует."""
+        collection_name = collection_name or QDRANT_COLLECTION_NAME
+        if vector_size is None:
+            vector_size = 384
+
+        try:
+            self.client.get_collection(collection_name=collection_name)
+        except UnexpectedStatusCode:
+            self.client.create_collection(
+                collection_name=collection_name,
+                vectors_config=models.VectorParams(
+                    size=vector_size,
+                    distance=models.Distance.COSINE,
+                ),
+            )
 
     async def delete_document_vectors(self, document_id: int) -> None:
         """Удалить все векторы документа из Qdrant."""

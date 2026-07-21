@@ -14,8 +14,7 @@ from app.crud.crud_document import (
     get_document_permissions,
 )
 from app.models.document import DocumentStatus
-from app.services.parser import parse_document
-from app.services.chunker import chunk_document
+from app.services.rag_service import GigaChatRAGService
 
 logger = logging.getLogger(__name__)
 
@@ -37,63 +36,26 @@ def process_document(document_id: int) -> None:
         update_document_status(db, document_id, DocumentStatus.PROCESSING)
         logger.info(f"Processing document {document_id}: {doc.filename}")
 
-        # 2. Парсинг
-        parse_result = parse_document(doc.filepath)
-        logger.info(f"Parsed {doc.filename}: {len(parse_result.text)} chars")
+        # 2. Используем новый RAG-сервис для индексирования документа
+        rag_service = GigaChatRAGService()
+        points = rag_service.index_document(doc.filepath)
+        logger.info(f"Indexed {len(points)} chunks for {doc.filename}")
 
-        # 3. Чанкинг
-        chunks = chunk_document(
-            text=parse_result.text,
-            metadata=parse_result.metadata,
-        )
-        logger.info(f"Created {len(chunks)} chunks for {doc.filename}")
-
-        # 4. Удаляем старые чанки (если переобработка)
+        # 3. Удаляем старые чанки (если переобработка)
         delete_chunks_by_document(db, document_id)
 
-        # 5. Генерация эмбеддингов и сохранение
-        embedder = get_embedder()
-        qdrant = get_qdrant_client()
-
-        # Получаем ACL правила для документа
-        permissions = get_document_permissions(db, document_id)
-        allowed_groups = list(set(p.group_id for p in permissions if not p.is_deny))
-
-        # Создаём коллекцию в Qdrant, если её нет
-        _ensure_qdrant_collection(qdrant, embedder.vector_size)
-
-        # Сохраняем чанки
-        for chunk in chunks:
-            # Генерируем эмбеддинг
-            embedding = embedder.embed(chunk.content)
-
-            # Сохраняем в Qdrant
-            point_id = qdrant.upsert(
-                collection_name=QDRANT_COLLECTION_NAME,
-                points=[{
-                    "vector": embedding,
-                    "payload": {
-                        "document_id": document_id,
-                        "chunk_index": chunk.chunk_index,
-                        "content": chunk.content,
-                        "chunk_type": chunk.chunk_type,
-                        "metadata": chunk.metadata,
-                        "allowed_groups": allowed_groups,
-                    },
-                }],
-            )
-
-            # Сохраняем в PostgreSQL
-            vector_id = str(point_id[0].uuid) if hasattr(point_id[0], 'uuid') else str(point_id[0])
+        # 4. Сохраняем метаданные чанков в PostgreSQL
+        for point in points:
+            payload = point.get("payload", {})
             create_chunk(
                 db=db,
                 document_id=document_id,
-                chunk_index=chunk.chunk_index,
-                content=chunk.content,
-                chunk_type=chunk.chunk_type,
-                metadata=chunk.metadata,
-                token_count=chunk.token_count,
-                vector_id=vector_id,
+                chunk_index=payload.get("chunk_index", 0),
+                content=payload.get("content", ""),
+                chunk_type=payload.get("chunk_type", "text"),
+                metadata=payload.get("metadata", {}),
+                token_count=0,
+                vector_id=str(point.get("id", "")),
             )
 
         # 6. Статус: READY

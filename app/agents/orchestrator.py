@@ -1,7 +1,12 @@
 """LangGraph оркестратор: Router → Search/RAG → Summarizer/Analytics/ArtifactGen."""
 
 from typing import TypedDict, Literal, Optional
-from langgraph.graph import StateGraph, END
+
+try:
+    from langgraph.graph import StateGraph, END
+except Exception:  # pragma: no cover - optional dependency guard
+    StateGraph = None
+    END = None
 
 from app.agents.router_agent import RouterAgent, RouteDecision
 from app.agents.search_rag_agent import SearchRAGAgent
@@ -35,12 +40,18 @@ class AgentOrchestrator:
         self.summarizer = SummarizerAgent()
         self.analytics = AnalyticsAgent()
         self.artifact_gen = ArtifactGeneratorAgent()
+        self.graph = None
 
-        # Строим граф
-        self._build_graph()
+        # Строим граф, если доступен LangGraph
+        if StateGraph is not None:
+            self._build_graph()
 
     def _build_graph(self) -> None:
         """Построить LangGraph граф и сохранить в self.graph."""
+        if StateGraph is None:
+            self.graph = None
+            return
+
         workflow = StateGraph(AgentState)
 
         # Узлы
@@ -248,6 +259,19 @@ class AgentOrchestrator:
             "citations": [],
             "error": None,
         }
+
+        if self.graph is None:
+            search_result = await self.search_rag.answer(
+                query=query,
+                user_groups=user_groups,
+            )
+            return {
+                "route": "search",
+                "final_answer": search_result.get("answer", ""),
+                "citations": search_result.get("citations", []),
+                "search_result": search_result,
+                "error": None,
+            }
 
         result = await self.graph.ainvoke(initial_state)
         return result

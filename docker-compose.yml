@@ -57,9 +57,7 @@ services:
       - project21-net
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: xaimelix/project21-app:latest
     container_name: project21-app
     depends_on:
       postgres:

@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libmagic1 \
-    libgl1-mesa-glx \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv package manager
@@ -19,11 +19,11 @@ RUN pip install --no-cache-dir uv
 
 WORKDIR /app
 
-# Copy only dependency file first for layer caching
-COPY pyproject.toml .
+# Copy dependency files first for layer caching
+COPY pyproject.toml uv.lock ./
 
 # Install project dependencies (production only)
-RUN uv sync --no-dev --frozen || uv pip install .
+RUN uv sync --no-dev --frozen --no-cache
 
 # Install gunicorn for production serving
 RUN pip install --no-cache-dir gunicorn
@@ -40,20 +40,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     libmagic1 \
-    libgl1-mesa-glx \
+    libgl1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
-# Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
-
-# Copy application code
-COPY --from=builder /app /app
+# Copy virtual environment and application code from builder
+COPY --link --from=builder /app /app
 COPY app/ /app/app/
-COPY migrations/ /app/migrations/
 COPY main.py /app/main.py
 
 WORKDIR /app

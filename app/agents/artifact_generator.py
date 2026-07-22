@@ -126,15 +126,12 @@ class ArtifactGeneratorAgent:
             return
 
         try:
-            credentials = (
-                f"{config.GIGACHAT_CLIENT_ID}|{config.GIGACHAT_CLIENT_SECRET}"
-            )
             self._gigachat_llm = GigaChatLangChain(
-                credentials=credentials,
-                scope=getattr(config, "GIGACHAT_SCOPE", "GIGACHAT_API_PERS"),
-                base_url=getattr(config, "GIGACHAT_API_URL", "https://gigachat.devices.sberbank.ru/api/v1"),
-                auth_url=getattr(config, "GIGACHAT_AUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"),
-                model="GigaChat",
+                credentials=config.GIGACHAT_CREDENTIALS,
+                scope=config.GIGACHAT_SCOPE,
+                base_url=config.GIGACHAT_API_URL,
+                auth_url=config.GIGACHAT_AUTH_URL,
+                model=config.GIGACHAT_MODEL,
                 temperature=0.1,
                 verify_ssl_certs=False,
                 timeout=30,

@@ -38,6 +38,8 @@ class GigaChatClient(LLMProvider):
         self.scope = scope or config.GIGACHAT_SCOPE
         self.auth_url = (auth_url or config.GIGACHAT_AUTH_URL).rstrip("/")
         self.api_url = (api_url or config.GIGACHAT_API_URL).rstrip("/")
+        # Используем готовый Authorization Key (Base64) из конфига
+        self._credentials = config.GIGACHAT_CREDENTIALS
 
         self._access_token: Optional[str] = None
         self._token_expires_at: float = 0.0
@@ -47,7 +49,7 @@ class GigaChatClient(LLMProvider):
         if self._access_token and time.time() < self._token_expires_at - 60:
             return self._access_token
 
-        # Request new token
+        # Request new token via Authorization: Basic <base64_credentials>
         async with httpx.AsyncClient(verify=False) as client:  # noqa: S501
             response = await client.post(
                 f"{self.auth_url}",
@@ -55,12 +57,10 @@ class GigaChatClient(LLMProvider):
                     "Content-Type": "application/x-www-form-urlencoded",
                     "Accept": "application/json",
                     "RqUID": self._generate_rquid(),
+                    "Authorization": f"Basic {self._credentials}",
                 },
                 data={
                     "scope": self.scope,
-                    "grant_type": "client_credentials",
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
                 },
                 timeout=30.0,
             )
@@ -169,7 +169,7 @@ class GigaChatClient(LLMProvider):
                     "Accept": "application/json",
                 },
                 json={
-                    "model": "GigaChat",
+                    "model": config.GIGACHAT_MODEL,
                     "messages": messages,
                     "stream": stream,
                     "temperature": temperature,
@@ -234,7 +234,7 @@ class GigaChatClient(LLMProvider):
                     "Accept": "application/json",
                 },
                 json={
-                    "model": "GigaChat",
+                    "model": "Embeddings-2",
                     "input": text,
                 },
                 timeout=30.0,

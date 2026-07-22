@@ -22,19 +22,12 @@ class EmbedderService:
         self._provider = provider
 
     def _get_provider(self):
-        """Ленивая инициализация провайдера LLM для эмбеддингов."""
-        has_gigachat_creds = bool(
-            getattr(config, "GIGACHAT_CLIENT_ID", "")
-            and getattr(config, "GIGACHAT_CLIENT_SECRET", "")
-        )
-        if (
-            self._provider is None
-            and getattr(config, "LLM_PROVIDER", "openai") == "gigachat"
-            and has_gigachat_creds
-        ):
-            from app.services.gigachat_provider import GigaChatClient
-            self._provider = GigaChatClient()
-        return self._provider
+        """Ленивая инициализация провайдера LLM для эмбеддингов.
+
+        GigaChat embeddings требуют оплаты (402 Payment Required).
+        По умолчанию используем sentence-transformers (локально).
+        """
+        return None  # GigaChat embeddings не используются из-за оплаты
 
     def _embed_with_gigachat(self, text: str) -> list[float]:
         """Получить эмбеддинг через GigaChat."""

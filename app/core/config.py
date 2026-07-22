@@ -92,3 +92,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 
 # === Storage (local files for MVP) ===
 LOCAL_STORAGE_PATH = os.getenv("LOCAL_STORAGE_PATH", "./storage")
+
+### === Hugging Face Token ===
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+
+
+# === Sparse Search (BM25) ===
+SPARSE_SEARCH_ENABLED = os.getenv("SPARSE_SEARCH_ENABLED", "true").lower() == "true"
+SPARSE_VECTOR_NAME = os.getenv("SPARSE_VECTOR_NAME", "bm25")

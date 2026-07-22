@@ -1,4 +1,5 @@
 import app.routes
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -17,6 +18,35 @@ from app.routes import router as page_router, get_templates
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for FastAPI."""
+    # Настройка логирования: все логи уровня INFO и выше пишутся в stderr
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("Logging configured: level=INFO")
+
+    # Предзагрузка моделей ML при старте (чтобы не блокировать event loop при первом запросе)
+    try:
+        logger.info("Preloading embedding model...")
+        from app.services.embedder import EmbedderService
+        embedder = EmbedderService()
+        embedder._load_model()
+        logger.info("Embedding model preloaded successfully")
+    except Exception as e:
+        logger.warning("Failed to preload embedding model: %s", e)
+
+    try:
+        logger.info("Preloading cross-encoder model...")
+        from app.services.reranker import Reranker
+        reranker = Reranker()
+        reranker._load_model()
+        logger.info("Cross-encoder model preloaded successfully")
+    except Exception as e:
+        logger.warning("Failed to preload cross-encoder model: %s", e)
+
     engine, local_session = _build_engine()
 
     if engine is not None and local_session is not None:

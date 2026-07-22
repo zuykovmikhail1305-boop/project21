@@ -62,28 +62,45 @@ async def upload_document(
     db: Session = Depends(get_db),
 ):
     """Загрузить документ."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("=== UPLOAD DEBUG ===")
+    logger.info(f"Filename: {file.filename}")
+    logger.info(f"Content-Type: {file.content_type}")
+    logger.info(f"Folder ID: {folder_id}")
+
     # Сохраняем файл локально
     upload_dir = "./uploads"
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, file.filename or "unnamed")
+    logger.info(f"Saving to: {file_path}")
 
     content = await file.read()
+    logger.info(f"File size: {len(content)} bytes")
+
     with open(file_path, "wb") as f:
         f.write(content)
+    logger.info(f"File saved successfully, exists: {os.path.exists(file_path)}")
 
     # Создаём запись в БД
-    doc = create_document(
-        db=db,
-        filename=file.filename or "unnamed",
-        filepath=file_path,
-        mime_type=file.content_type or "application/octet-stream",
-        file_size=len(content),
-        uploaded_by=1,  # TODO: заменить на реального пользователя из JWT
-        folder_id=folder_id,
-        storage_path=file_path,
-    )
+    try:
+        doc = create_document(
+            db=db,
+            filename=file.filename or "unnamed",
+            filepath=file_path,
+            mime_type=file.content_type or "application/octet-stream",
+            file_size=len(content),
+            uploaded_by=1,  # TODO: заменить на реального пользователя из JWT
+            folder_id=folder_id,
+            storage_path=file_path,
+        )
+        logger.info(f"DB record created: id={doc.id}, status={doc.status}")
+    except Exception as e:
+        logger.error(f"DB create_document failed: {e}", exc_info=True)
+        raise
 
     # Запускаем ETL-обработку в фоне
+    logger.info(f"Adding background task for document {doc.id}")
     background_tasks.add_task(process_document_background, doc.id)
 
     return DocumentUploadResponse(

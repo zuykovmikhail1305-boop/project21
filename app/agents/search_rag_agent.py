@@ -35,19 +35,40 @@ class SearchRAGAgent:
             embedder=self.embedder,
             reranker=self.reranker,
         )
+        # История диалога для HyDE (как в RAG_Misha/find.py:158-160)
+        self._history: list[dict] = []
 
     async def search(self, query: str, user_groups: list[int]) -> list[dict]:
-        """Поиск релевантных чанков."""
-        return self.rag_service.search(
+        """Поиск релевантных чанков с историей для HyDE."""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("=== DIAG: SearchRAGAgent.search: query=%s, user_groups=%s, history_len=%d",
+                    query[:100], user_groups, len(self._history))
+        return await self.rag_service.search(
             query=query,
             user_groups=user_groups,
+            history=self._history,
             top_k=20,
         )
 
     async def answer(self, query: str, user_groups: list[int]) -> dict:
-        """Ответить на вопрос пользователя на основе документов."""
-        return self.rag_service.answer(
+        """Ответить на вопрос пользователя на основе документов.
+
+        Передаёт историю диалога в HyDE и обновляет её после ответа.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("=== DIAG: SearchRAGAgent.answer: query=%s, user_groups=%s, history_len=%d",
+                    query[:100], user_groups, len(self._history))
+        result = await self.rag_service.answer(
             query=query,
             user_groups=user_groups,
+            history=self._history,
             top_k=5,
         )
+        # Обновляем историю (как в RAG_Misha/find.py:158-160)
+        self._history.append({"role": "user", "content": query})
+        self._history.append({"role": "assistant", "content": result.get("answer", "")})
+        logger.info("=== DIAG: SearchRAGAgent.answer result: answer_len=%d, n_chunks=%d, confidence=%s",
+                    len(result.get("answer", "")), len(result.get("chunks", [])), result.get("confidence"))
+        return result

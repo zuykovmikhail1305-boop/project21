@@ -11,8 +11,12 @@
 import json
 import logging
 import os
-import shutil
 from typing import Optional
+
+try:
+    from langchain_gigachat import GigaChat as GigaChatLangChain
+except Exception:  # pragma: no cover - optional dependency guard
+    GigaChatLangChain = None
 
 try:
     from langchain_openai import ChatOpenAI
@@ -88,21 +92,70 @@ class ArtifactGeneratorAgent:
         self.sandbox = sandbox or SubprocessSandbox()
         self.marp = marp or MarpRenderer()
 
-        self.llm = None
+        # LLM chains: GigaChat (приоритет) или ChatOpenAI (fallback)
+        self._gigachat_llm = None
+        self._openai_llm = None
+
         self.planning_chain = None
         self.chart_code_chain = None
         self.marp_chain = None
 
-        if ChatOpenAI is not None:
-            try:
-                self.llm = ChatOpenAI(
-                    model=config.OPENAI_MODEL,
-                    temperature=0.1,
-                    api_key=config.OPENAI_API_KEY,  # type: ignore[arg-type]
-                    base_url=config.OPENAI_API_BASE,
-                )
-            except Exception:
-                self.llm = None
+        # 1. GigaChat (langchain-gigachat) — приоритет
+        self._init_gigachat()
+
+        # 2. ChatOpenAI — fallback
+        self._init_openai()
+
+        # 3. Выбираем, какой LLM использовать для chain
+        self.llm = self._gigachat_llm or self._openai_llm
+        if self.llm is not None:
+            self.planning_chain = self.llm.with_structured_output(LLMArtifactPlan)
+            self.chart_code_chain = self.llm.with_structured_output(LLMChartCode)
+            self.marp_chain = self.llm.with_structured_output(LLMMarkdownContent)
+
+    def _init_gigachat(self) -> None:
+        """Инициализировать GigaChat через langchain-gigachat."""
+        if GigaChatLangChain is None:
+            return
+
+        has_creds = bool(
+            getattr(config, "GIGACHAT_CLIENT_ID", "")
+            and getattr(config, "GIGACHAT_CLIENT_SECRET", "")
+        )
+        if not has_creds:
+            return
+
+        try:
+            credentials = (
+                f"{config.GIGACHAT_CLIENT_ID}|{config.GIGACHAT_CLIENT_SECRET}"
+            )
+            self._gigachat_llm = GigaChatLangChain(
+                credentials=credentials,
+                scope=getattr(config, "GIGACHAT_SCOPE", "GIGACHAT_API_PERS"),
+                base_url=getattr(config, "GIGACHAT_API_URL", "https://gigachat.devices.sberbank.ru/api/v1"),
+                auth_url=getattr(config, "GIGACHAT_AUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"),
+                model="GigaChat",
+                temperature=0.1,
+                verify_ssl_certs=False,
+                timeout=30,
+            )
+        except Exception:
+            self._gigachat_llm = None
+
+    def _init_openai(self) -> None:
+        """Инициализировать ChatOpenAI как fallback."""
+        if ChatOpenAI is None:
+            return
+
+        try:
+            self._openai_llm = ChatOpenAI(
+                model=config.OPENAI_MODEL,
+                temperature=0.1,
+                api_key=config.OPENAI_API_KEY,
+                base_url=config.OPENAI_API_BASE,
+            )
+        except Exception:
+            self._openai_llm = None
 
     async def generate(
         self,

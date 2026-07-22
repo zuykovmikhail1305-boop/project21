@@ -24,25 +24,37 @@ def process_document(document_id: int) -> None:
 
     Запускается в фоновой задаче (BackgroundTasks).
     """
+    import traceback
     db: Session = next(get_db())
 
     try:
         doc = get_document(db, document_id)
         if not doc:
-            logger.error(f"Document {document_id} not found")
+            logger.error(f"=== ETL DEBUG: Document {document_id} not found in DB")
             return
+
+        logger.info(f"=== ETL DEBUG: Starting processing for doc {document_id}")
+        logger.info(f"=== ETL DEBUG: filename={doc.filename}, filepath={doc.filepath}")
+        logger.info(f"=== ETL DEBUG: filepath exists on disk: {__import__('os').path.exists(doc.filepath)}")
 
         # 1. Статус: PROCESSING
         update_document_status(db, document_id, DocumentStatus.PROCESSING)
-        logger.info(f"Processing document {document_id}: {doc.filename}")
+        logger.info(f"=== ETL DEBUG: Status set to PROCESSING for doc {document_id}")
 
         # 2. Используем новый RAG-сервис для индексирования документа
+        logger.info(f"=== ETL DEBUG: Creating GigaChatRAGService...")
         rag_service = GigaChatRAGService()
-        points = rag_service.index_document(doc.filepath)
-        logger.info(f"Indexed {len(points)} chunks for {doc.filename}")
+        logger.info(f"=== ETL DEBUG: Calling index_document with filepath={doc.filepath}, document_id={document_id}")
+        points = rag_service.index_document(
+            file_path=str(doc.filepath),
+            document_id=document_id,
+            db=db,
+        )
+        logger.info(f"=== ETL DEBUG: Indexed {len(points)} chunks for {doc.filename}")
 
         # 3. Удаляем старые чанки (если переобработка)
         delete_chunks_by_document(db, document_id)
+        logger.info(f"=== ETL DEBUG: Old chunks deleted for doc {document_id}")
 
         # 4. Сохраняем метаданные чанков в PostgreSQL
         for point in points:
@@ -57,13 +69,15 @@ def process_document(document_id: int) -> None:
                 token_count=0,
                 vector_id=str(point.get("id", "")),
             )
+        logger.info(f"=== ETL DEBUG: {len(points)} chunks saved to DB for doc {document_id}")
 
         # 6. Статус: READY
         update_document_status(db, document_id, DocumentStatus.READY)
-        logger.info(f"Document {document_id} processed successfully")
+        logger.info(f"=== ETL DEBUG: Document {document_id} processed successfully, status=READY")
 
     except Exception as e:
-        logger.error(f"Error processing document {document_id}: {e}")
+        logger.error(f"=== ETL DEBUG: Error processing document {document_id}: {e}")
+        logger.error(traceback.format_exc())
         update_document_status(db, document_id, DocumentStatus.ERROR, str(e))
         raise
 

@@ -11,6 +11,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.document import Document
 from app.models.chat import ChatSession, ChatMessage, SessionStatus
+from app.models.artifact_v2 import ArtifactProject
 
 router = APIRouter()
 
@@ -25,20 +26,83 @@ def get_templates() -> Jinja2Templates:
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def index_page(request: Request):
-    """Redirect to chat page."""
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url="/chat")
+async def index_page(request: Request, db: Session = Depends(get_db)):
+    """Main page with search and quick actions."""
+    recent_sessions = (
+        db.query(ChatSession)
+        .filter(ChatSession.status == SessionStatus.ACTIVE)
+        .order_by(ChatSession.updated_at.desc())
+        .limit(5)
+        .all()
+    )
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request,
+        "main.html",
+        context={
+            "request": request,
+            "active_page": "main",
+            "recent_sessions": recent_sessions,
+        },
+    )
 
 
 @router.get("/chat", response_class=HTMLResponse, include_in_schema=False)
-async def chat_page(request: Request):
-    """Chat interface page."""
+async def chat_page(request: Request, q: str = ""):
+    """Chat interface page. Accepts optional ?q= query to auto-submit."""
     tmpl = get_templates()
     return tmpl.TemplateResponse(
         request,
         "chat.html",
-        context={"request": request, "active_page": "chat"},
+        context={
+            "request": request,
+            "active_page": "chat",
+            "initial_query": q,
+        },
+    )
+
+
+@router.get("/library", response_class=HTMLResponse, include_in_schema=False)
+async def library_page(request: Request, db: Session = Depends(get_db)):
+    """Library page with document grid."""
+    documents = (
+        db.query(Document)
+        .order_by(Document.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    total_count = db.query(func.count(Document.id)).scalar() or 0
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request,
+        "labrary.html",
+        context={
+            "request": request,
+            "active_page": "library",
+            "documents": documents,
+            "total_count": total_count,
+        },
+    )
+
+
+@router.get("/projects", response_class=HTMLResponse, include_in_schema=False)
+async def projects_page(request: Request, db: Session = Depends(get_db)):
+    """Projects page with artifact grid."""
+    projects = (
+        db.query(ArtifactProject)
+        .order_by(ArtifactProject.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request,
+        "projects.html",
+        context={
+            "request": request,
+            "active_page": "projects",
+            "projects": projects,
+        },
     )
 
 
@@ -63,6 +127,33 @@ async def documents_page(
             "request": request,
             "active_page": "documents",
             "documents": documents,
+        },
+    )
+
+
+@router.get("/documents/{doc_id}", response_class=HTMLResponse, include_in_schema=False)
+async def document_view_page(
+    request: Request,
+    doc_id: int,
+    db: Session = Depends(get_db),
+):
+    """Document view page with AI summary panel."""
+    from fastapi.responses import RedirectResponse
+
+    document = db.query(Document).filter(Document.id == doc_id).first()
+    if not document:
+        return RedirectResponse(url="/documents")
+
+    chunks = document.chunks
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request,
+        "view_in_the_document.html",
+        context={
+            "request": request,
+            "active_page": "documents",
+            "document": document,
+            "chunks": chunks,
         },
     )
 
@@ -142,6 +233,7 @@ async def dashboard_page(
         },
     )
 
+
 @router.get("/settings", response_class=HTMLResponse, include_in_schema=False)
 async def settings_page(request: Request):
     """Settings page."""
@@ -155,6 +247,7 @@ async def settings_page(request: Request):
         },
     )
 
+
 @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
 async def login_page(request: Request):
     """Login page."""
@@ -166,6 +259,7 @@ async def login_page(request: Request):
             "active_page": "login",
         },
     )
+
 
 @router.get("/register", response_class=HTMLResponse, include_in_schema=False)
 async def register_page(request: Request):

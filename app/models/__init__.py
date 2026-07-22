@@ -10,6 +10,13 @@ from app.models.document import (
 )
 from app.models.chat import ChatSession, ChatMessage, SessionStatus
 from app.models.artifact import Artifact, ArtifactStatus
+from app.models.artifact_v2 import (
+    ArtifactProject,
+    ArtifactVersion,
+    ArtifactAsset,
+    ArtifactTemplate,
+    Theme,
+)
 
 __all__ = [
     "User",
@@ -26,4 +33,9 @@ __all__ = [
     "SessionStatus",
     "Artifact",
     "ArtifactStatus",
+    "ArtifactProject",
+    "ArtifactVersion",
+    "ArtifactAsset",
+    "ArtifactTemplate",
+    "Theme",
 ]

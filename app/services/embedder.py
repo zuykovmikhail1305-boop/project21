@@ -1,6 +1,7 @@
 """Сервис генерации эмбеддингов через sentence-transformers или GigaChat."""
 
 import asyncio
+import logging
 from typing import Optional
 
 from app.core import config
@@ -53,32 +54,69 @@ class EmbedderService:
     def _load_model(self):
         """Ленивая загрузка локальной модели."""
         if self._model is None:
+            import logging
+            logger = logging.getLogger(__name__)
             try:
                 from sentence_transformers import SentenceTransformer
+                logger.info("[TIMING] Loading embedding model '%s' on %s ...", self.model_name, self.device)
+                import time
+                t0 = time.time()
                 self._model = SentenceTransformer(
                     self.model_name,
                     device=self.device,
                 )
+                logger.info("[TIMING] Embedding model '%s' loaded in %.2fs", self.model_name, time.time() - t0)
             except ImportError as exc:
                 raise ImportError(
                     "sentence-transformers is required. Install: pip install sentence-transformers"
                 ) from exc
 
     def embed(self, text: str) -> list[float]:
-        """Получить эмбеддинг для одного текста."""
+        """Получить эмбеддинг для одного текста (синхронно)."""
+        import logging
+        logger = logging.getLogger(__name__)
+        import time
+        t0 = time.time()
+
         provider = self._get_provider()
         if provider is not None:
-            return self._embed_with_gigachat(text)
+            result = self._embed_with_gigachat(text)
+            logger.info("[TIMING] embed() via GigaChat took %.2fs (text_len=%d)", time.time() - t0, len(text))
+            return result
 
         self._load_model()
         embedding = self._model.encode(text, normalize_embeddings=True)
+        logger.info("[TIMING] embed() via sentence-transformers took %.2fs (text_len=%d)", time.time() - t0, len(text))
         return embedding.tolist()
+
+    async def embed_async(self, text: str) -> list[float]:
+        """Получить эмбеддинг асинхронно (не блокирует event loop).
+
+        Запускает синхронный embed() в отдельном потоке через run_in_executor,
+        чтобы не блокировать event loop FastAPI.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        import time
+        t0 = time.time()
+
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, self.embed, text)
+        logger.info("[TIMING] embed_async() took %.2fs (text_len=%d)", time.time() - t0, len(text))
+        return result
 
     def embed_batch(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
         """Получить эмбеддинги для списка текстов."""
+        import logging
+        logger = logging.getLogger(__name__)
+        import time
+        t0 = time.time()
+
         provider = self._get_provider()
         if provider is not None:
-            return [self._embed_with_gigachat(text) for text in texts]
+            result = [self._embed_with_gigachat(text) for text in texts]
+            logger.info("[TIMING] embed_batch() via GigaChat took %.2fs (n=%d)", time.time() - t0, len(texts))
+            return result
 
         self._load_model()
         embeddings = self._model.encode(
@@ -87,6 +125,7 @@ class EmbedderService:
             normalize_embeddings=True,
             show_progress_bar=False,
         )
+        logger.info("[TIMING] embed_batch() via sentence-transformers took %.2fs (n=%d)", time.time() - t0, len(texts))
         return [emb.tolist() for emb in embeddings]
 
     @property

@@ -128,18 +128,24 @@ def build_qdrant_filter(user_groups: list[int]) -> dict:
     Qdrant будет искать только те чанки, у которых в payload.allowed_groups
     есть хотя бы одна группа из списка user_groups.
 
+    Важно: группа 0 (public) даёт доступ всем аутентифицированным пользователям.
+    Если в allowed_groups есть 0 — документ считается публичным.
+
     Args:
         user_groups: Список ID групп пользователя (с учётом наследования).
 
     Returns:
         Словарь с фильтром для Qdrant search API.
     """
+    # Добавляем 0 (public access sentinel) к группам пользователя,
+    # чтобы публичные документы (allowed_groups: [0]) были доступны всем
+    effective_groups = list(set(user_groups + [0]))
     return {
         "must": [
             {
                 "key": "allowed_groups",
                 "match": {
-                    "any": user_groups,
+                    "any": effective_groups,
                 },
             }
         ],

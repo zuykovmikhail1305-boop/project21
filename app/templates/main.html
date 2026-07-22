@@ -1,225 +1,157 @@
-<!DOCTYPE html><html lang="ru" class="light" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700;800&amp;family=Murecho:wght@400;700&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            "colors": {
-                    "on-tertiary-fixed": "#002117",
-                    "secondary-fixed-dim": "#95da07",
-                    "on-secondary-fixed": "#121f00",
-                    "primary": "#006b1d",
-                    "error-container": "#ffdad6",
-                    "on-tertiary-container": "#f5fff8",
-                    "surface-container-high": "#e8e8e8",
-                    "on-surface-variant": "#3e4a3c",
-                    "inverse-primary": "#68df6e",
-                    "tertiary-fixed": "#61fccb",
-                    "outline-variant": "#bdcab8",
-                    "surface-container-lowest": "#ffffff",
-                    "secondary-fixed": "#aff834",
-                    "tertiary-fixed-dim": "#3cdfb0",
-                    "outline": "#6e7b6a",
-                    "surface-dim": "#dadada",
-                    "surface-container": "#eeeeee",
-                    "error": "#ba1a1a",
-                    "secondary-container": "#aff834",
-                    "surface-bright": "#f9f9f9",
-                    "surface-container-highest": "#e2e2e2",
-                    "on-surface": "#1a1c1c",
-                    "on-error-container": "#93000a",
-                    "inverse-surface": "#2f3131",
-                    "on-primary": "#ffffff",
-                    "tertiary": "#006950",
-                    "primary-fixed": "#84fc87",
-                    "surface-container-low": "#f3f3f4",
-                    "on-secondary": "#ffffff",
-                    "primary-container": "#008728",
-                    "on-tertiary-fixed-variant": "#00513d",
-                    "on-primary-container": "#f7fff1",
-                    "primary-fixed-dim": "#68df6e",
-                    "secondary": "#456800",
-                    "tertiary-container": "#008566",
-                    "on-background": "#1a1c1c",
-                    "on-tertiary": "#ffffff",
-                    "on-primary-fixed-variant": "#005315",
-                    "on-error": "#ffffff",
-                    "surface-tint": "#006e1e",
-                    "on-secondary-container": "#496f00",
-                    "surface": "#f9f9f9",
-                    "background": "#f9f9f9",
-                    "on-secondary-fixed-variant": "#334f00",
-                    "inverse-on-surface": "#f0f1f1",
-                    "surface-variant": "#e2e2e2",
-                    "on-primary-fixed": "#002204"
-            },
-            "borderRadius": {
-                    "DEFAULT": "0.25rem",
-                    "lg": "0.5rem",
-                    "xl": "0.75rem",
-                    "full": "9999px"
-            },
-            "fontFamily": {
-                    "headline": ["Google Sans"],
-                    "display": ["Google Sans"],
-                    "body": ["Google Sans"],
-                    "label": ["Murecho"]
-            }
-          },
-        },
-      }
-    }catch(_e){}</script><meta charset="utf-8"></head><body class="bg-background text-on-background overflow-hidden">
-<!-- TopNavBar -->
-<header class="flex justify-between items-center px-8 h-16 w-full fixed top-0 z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 shadow-sm">
-<div class="flex items-center gap-6">
-<span class="text-headline-md font-black tracking-tight text-primary dark:text-primary-fixed">CorpAI Intelligence</span>
-<div class="hidden md:flex gap-8 ml-12">
-<nav class="flex items-center gap-6 h-16">
-<a href="#" class="text-primary font-bold border-b-2 border-primary h-full flex items-center px-2 hover:text-primary transition-colors duration-200 active:scale-95 transition-transform">Explore</a>
-<a href="#" class="text-on-surface-variant font-medium h-full flex items-center px-2 hover:text-primary transition-colors duration-200 active:scale-95 transition-transform">Solutions</a>
-<a href="#" class="text-on-surface-variant font-medium h-full flex items-center px-2 hover:text-primary transition-colors duration-200 active:scale-95 transition-transform">Resources</a>
-</nav>
-</div>
-</div>
-<div class="flex items-center gap-4">
+{% extends "base.html" %}
 
-<button class="p-2 rounded-full hover:bg-surface-variant/30 text-on-surface-variant transition-colors active:scale-95 transition-transform">
+{% block title %}Главная — CorpAI Intelligence{% endblock %}
 
-</button>
-<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 ml-2">
+{% block extra_head %}
+<style>
+    /* Main page specific styles */
+    .emerald-glow-btn {
+        transition: all 0.3s ease;
+    }
+    .emerald-glow-btn:hover {
+        box-shadow: 0 0 25px rgba(0, 107, 29, 0.4);
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
 
-</div>
-</div>
-</header>
-<!-- SideNavBar -->
-<aside class="fixed left-0 top-16 h-[calc(100vh-4rem)] flex flex-col p-4 z-40 bg-surface-container-low/50 dark:bg-surface-container-low/50 backdrop-blur-lg border-r border-outline-variant/10 w-64 hidden md:flex">
-<div class="flex flex-col gap-1 mb-8">
-<button class="w-full py-3 px-4 flex items-center gap-3 bg-primary text-on-primary rounded-full font-bold active:translate-x-1 transition-transform mb-6">
-<span class="material-symbols-outlined">add</span>
-<span class="">New Analysis</span>
-</button>
-<nav class="space-y-1">
-<div class="font-label uppercase tracking-widest text-[10px] text-on-surface-variant/60 px-4 py-2">Workspace</div>
-<a class="flex items-center gap-3 py-2.5 px-4 bg-primary-container/20 text-primary font-bold rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
-<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">chat</span>
-<span class="">Chats</span>
-</a>
-<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
-<span class="material-symbols-outlined">book_2</span>
-<span class="">Library</span>
-</a>
-<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
-<span class="material-symbols-outlined">folder_shared</span>
-<span class="">Projects</span>
-</a>
-<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
-<span class="material-symbols-outlined">apps</span>
-<span class="">Apps</span>
-</a>
-</nav>
-</div>
-<div class="mt-auto space-y-1 border-t border-outline-variant/10 pt-4">
-<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
-<span class="material-symbols-outlined">help</span>
-<span class="">Support</span>
-</a>
-<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
-<span class="material-symbols-outlined">notifications</span>
-<span class="">Уведомления</span>
-</a><a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
-<span class="material-symbols-outlined">settings</span>
-<span class="">Settings</span>
-</a>
-</div>
-</aside>
-<!-- Main Content Canvas -->
-<main class="ml-0 md:ml-64 pt-16 h-screen relative overflow-hidden">
-<!-- Background Animation Shader -->
+{% block background_canvas %}
+<div class="fixed inset-0 z-0 pointer-events-none" id="background-canvas"></div>
+{% endblock %}
 
-<!-- Subtle Gradient Overlays -->
-<div class="absolute inset-0 bg-gradient-to-b from-transparent via-surface/30 to-surface pointer-events-none"></div>
-<div class="relative z-10 w-full h-full flex flex-col items-center justify-center px-6 -mt-12">
-<!-- Centerpiece Hero Image from Prompt -->
-<div class="w-full max-w-2xl mb-12 transform hover:scale-[1.02] transition-transform duration-700">
+{% block content %}
+<div class="h-full relative flex flex-col items-center justify-center overflow-hidden z-10">
+    <div class="w-full max-w-4xl px-6 flex flex-col items-center">
+        <!-- Assistant Orb / Logo -->
+        <div class="mb-10 animate-float relative">
+            <div class="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
+            <div class="w-20 h-20 rounded-full bg-primary-container/30 flex items-center justify-center relative">
+                <span class="material-symbols-outlined text-4xl text-primary">psychology</span>
+            </div>
+        </div>
 
+        <!-- Main Heading -->
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-on-surface mb-12 text-center leading-tight animate-fade-in-up">
+            Что сегодня в <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary-fixed-dim">повестке дня</span>?
+        </h1>
+
+        <!-- Search Command Interface -->
+        <form id="search-form" action="/chat" method="GET" class="w-full max-w-3xl space-y-10 animate-fade-in-up" style="animation-delay: 0.2s">
+            <div class="deep-glass rounded-[2rem] p-2 flex items-center gap-2 transition-all duration-500 hover:emerald-protocol-glow focus-within:emerald-protocol-glow group" id="search-container">
+                <div class="p-3 text-on-surface-variant/60">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                </div>
+                <input name="q" class="flex-1 bg-transparent border-none focus:ring-0 text-lg font-medium placeholder:text-on-surface-variant/40 text-on-surface" placeholder="Спросите CorpAI о документах, отчетах или задачах..." type="text" autofocus>
+                <div class="flex items-center gap-1.5 px-4 h-12 bg-surface-container-low/40 rounded-full border border-outline-variant/10">
+                    <div class="w-1 h-3 bg-primary/40 rounded-full pulse-bar" style="animation-delay: 0s"></div>
+                    <div class="w-1 h-5 bg-primary/70 rounded-full pulse-bar" style="animation-delay: 0.2s"></div>
+                    <div class="w-1 h-4 bg-primary/50 rounded-full pulse-bar" style="animation-delay: 0.4s"></div>
+                </div>
+                <button type="submit" class="w-12 h-12 flex items-center justify-center bg-primary text-on-primary rounded-full hover:shadow-lg hover:scale-105 transition-all active:scale-95 group-focus-within:bg-primary-container group-focus-within:text-on-primary-container hover:shadow-[0_0_25px_rgba(0,107,29,0.5)] duration-300">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-fade-in-up" style="animation-delay: 0.4s">
+                <div class="group relative">
+                    <a href="/chat?q=Создай отчет по квартальным результатам" class="block w-full p-5 deep-glass rounded-2xl action-card flex flex-col items-center gap-3 text-center border border-white/40 no-underline">
+                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-1">
+                            <span class="material-symbols-outlined text-3xl">analytics</span>
+                        </div>
+                        <span class="text-sm font-bold text-on-surface">Создать отчет</span>
+                    </a>
+                    <div class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-64 p-4 deep-glass rounded-xl text-xs text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
+                        <div class="font-bold text-primary mb-1">Аналитический модуль</div>
+                        Генерация структурированных отчетов на основе корпоративных данных с использованием нейросетевых моделей.
+                    </div>
+                </div>
+                <div class="group relative">
+                    <a href="/chat?q=Найди информацию о квартальных отчётах" class="block w-full p-5 deep-glass rounded-2xl action-card flex flex-col items-center gap-3 text-center border border-white/40 no-underline">
+                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-1">
+                            <span class="material-symbols-outlined text-3xl">manage_search</span>
+                        </div>
+                        <span class="text-sm font-bold text-on-surface">Поиск в базе</span>
+                    </a>
+                    <div class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-64 p-4 deep-glass rounded-xl text-xs text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
+                        <div class="font-bold text-primary mb-1">Умный поиск</div>
+                        Семантический поиск по всем загруженным документам, PDF-файлам и внутренним регламентам компании.
+                    </div>
+                </div>
+                <div class="group relative">
+                    <a href="/chat?q=Настрой ассистента для работы с документами" class="block w-full p-5 deep-glass rounded-2xl action-card flex flex-col items-center gap-3 text-center border border-white/40 no-underline">
+                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-1">
+                            <span class="material-symbols-outlined text-3xl">psychology_alt</span>
+                        </div>
+                        <span class="text-sm font-bold text-on-surface">Настроить ИИ</span>
+                    </a>
+                    <div class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-64 p-4 deep-glass rounded-xl text-xs text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
+                        <div class="font-bold text-primary mb-1">Кастомизация агента</div>
+                        Редактирование системных промптов и навыков ассистента для решения узкоспециализированных бизнес-задач.
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
-<!-- Main Heading -->
-<h1 class="text-[44px] md:text-6xl font-extrabold tracking-tight text-on-surface mb-12 text-center leading-tight">
-                Что сегодня в <span class="text-primary">повестке дня</span>?
-            </h1>
-<!-- Search Command Interface -->
-<div class="w-full max-w-3xl space-y-8">
-<div class="glass-panel emerald-glow rounded-full px-6 py-4 flex items-center gap-4 transition-all focus-within:ring-2 focus-within:ring-primary/20">
-<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
-<span class="material-symbols-outlined">add</span>
-</button>
-<input class="flex-1 bg-transparent border-none focus:ring-0 text-xl font-medium placeholder:text-on-surface-variant/50 text-on-surface" placeholder="Спросите CorpAI..." type="text">
-<div class="flex items-center gap-3">
-<div class="flex items-center gap-1.5 px-2">
-<div class="w-1 h-4 bg-primary/20 rounded-full"></div>
-<div class="w-1 h-7 bg-primary/40 rounded-full pulse-animation"></div>
-<div class="w-1 h-5 bg-primary/30 rounded-full"></div>
-</div>
-<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
-<span class="material-symbols-outlined">mic</span>
-</button>
-<button class="p-3 bg-primary text-on-primary rounded-full hover:bg-primary-container transition-all active:scale-90">
-<span class="material-symbols-outlined">arrow_forward</span>
-</button>
-</div>
-</div>
-<!-- Quick Actions -->
-<div class="flex flex-wrap justify-center gap-4">
-<button class="flex items-center gap-2 px-5 py-3 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all group active:scale-95 rounded-full">
-<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">image</span>
-<span class="text-sm font-medium">Создать изображение</span>
-</button>
-<button class="flex items-center gap-2 px-5 py-3 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all group active:scale-95 rounded-full">
-<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">edit_note</span>
-<span class="text-sm font-medium">Напиши или отредактируй</span>
-</button>
-<button class="flex items-center gap-2 px-5 py-3 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all group active:scale-95 rounded-full">
-<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">language</span>
-<span class="text-sm font-medium">Искать в интернете</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-<!-- Decorative Glow Line -->
-<div class="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-</main>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
-        // Micro-interactions for the search bar
-        const searchInput = document.querySelector('input');
-        const searchContainer = searchInput.parentElement;
+    // Breathing Background Implementation
+    const backgroundContainer = document.getElementById('background-canvas');
+    const colors = ['#006b1d', '#95da07', '#3cdfb0', '#008566'];
 
+    function createGlowOrb() {
+        const orb = document.createElement('div');
+        const size = Math.random() * 500 + 400;
+        orb.className = 'absolute rounded-full pointer-events-none opacity-[0.08] filter blur-[120px] transition-all duration-[15000ms] ease-in-out';
+        orb.style.width = size + 'px';
+        orb.style.height = size + 'px';
+        orb.style.background = colors[Math.floor(Math.random() * colors.length)];
+
+        const posX = Math.random() * 100;
+        const posY = Math.random() * 100;
+        orb.style.left = posX + '%';
+        orb.style.top = posY + '%';
+
+        backgroundContainer.appendChild(orb);
+
+        const move = () => {
+            const nextX = Math.random() * 100;
+            const nextY = Math.random() * 100;
+            orb.style.left = nextX + '%';
+            orb.style.top = nextY + '%';
+            orb.style.transform = `scale(${0.8 + Math.random() * 0.4})`;
+        };
+
+        setTimeout(move, 100);
+        setInterval(move, 15000);
+    }
+
+    for (let i = 0; i < 5; i++) {
+        createGlowOrb();
+    }
+
+    // Search bar focus interaction
+    const searchInput = document.querySelector('input[name="q"]');
+    const searchContainer = document.getElementById('search-container');
+
+    if (searchInput) {
         searchInput.addEventListener('focus', () => {
-            searchContainer.classList.add('emerald-glow');
-            searchContainer.style.borderColor = 'rgba(0, 107, 29, 0.4)';
+            searchContainer.classList.add('emerald-protocol-glow');
         });
 
         searchInput.addEventListener('blur', () => {
-            searchContainer.style.borderColor = 'rgba(0, 107, 29, 0.1)';
+            searchContainer.classList.remove('emerald-protocol-glow');
         });
 
-        // Floating particle effect for atmosphere (vanilla js)
-        const canvasContainer = document.querySelector('main');
-        for (let i = 0; i < 5; i++) {
-            const glow = document.createElement('div');
-            glow.className = 'absolute rounded-full pointer-events-none opacity-20 filter blur-[80px]';
-            glow.style.width = Math.random() * 300 + 200 + 'px';
-            glow.style.height = glow.style.width;
-            glow.style.background = i % 2 === 0 ? '#006b1d' : '#42E3B4';
-            glow.style.left = Math.random() * 100 + '%';
-            glow.style.top = Math.random() * 100 + '%';
-            glow.style.transition = 'all 10s ease-in-out';
-            canvasContainer.appendChild(glow);
-            
-            setInterval(() => {
-                glow.style.left = Math.random() * 100 + '%';
-                glow.style.top = Math.random() * 100 + '%';
-            }, 10000);
-        }
-    </script>
-
-</body></html>
+        // Submit on Enter (already handled by form, but keep for clarity)
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                document.getElementById('search-form').submit();
+            }
+        });
+    }
+</script>
+{% endblock %}

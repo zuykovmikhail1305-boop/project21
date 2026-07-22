@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CorpAI Intelligence{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700;800&family=Murecho:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700;800&family=Murecho:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
         try {
@@ -14,34 +14,177 @@
                 theme: {
                     extend: {
                         colors: {
-                            primary: '#006B5E',
-                            'on-primary': '#FFFFFF',
-                            'primary-container': '#A7F5E5',
-                            'on-primary-container': '#00201B',
-                            secondary: '#4B635C',
-                            'on-secondary': '#FFFFFF',
-                            'secondary-container': '#CDE9DF',
-                            'on-secondary-container': '#07201B',
-                            tertiary: '#426277',
-                            'on-tertiary': '#FFFFFF',
-                            'tertiary-container': '#C9E7FF',
-                            'on-tertiary-container': '#001E2E',
-                            error: '#BA1A1A',
-                            'on-error': '#FFFFFF',
-                            'error-container': '#FFDAD6',
-                            'on-error-container': '#410002',
-                            background: '#FBFDF8',
-                            'on-background': '#191C1A',
-                            surface: '#FBFDF8',
-                            'on-surface': '#191C1A',
-                            'surface-variant': '#DBE5DE',
-                            'on-surface-variant': '#404943',
-                            'outline': '#707973',
-                            'outline-variant': '#BFC9C2',
-                            'surface-container-low': '#F0F5EF',
+                            // Primary
+                            primary: '#006b1d',
+                            'on-primary': '#ffffff',
+                            'primary-container': '#008728',
+                            'on-primary-container': '#f7fff1',
+                            'primary-hover': '#005515',
+                            'primary-active': '#004010',
+                            'primary-fixed': '#84fc87',
+                            'primary-fixed-dim': '#68df6e',
+                            'on-primary-fixed': '#002204',
+                            'on-primary-fixed-variant': '#005315',
+                            'inverse-primary': '#68df6e',
+
+                            // Secondary
+                            secondary: '#456800',
+                            'on-secondary': '#ffffff',
+                            'secondary-container': '#aff834',
+                            'on-secondary-container': '#496f00',
+                            'secondary-fixed': '#aff834',
+                            'secondary-fixed-dim': '#95da07',
+                            'on-secondary-fixed': '#121f00',
+                            'on-secondary-fixed-variant': '#334f00',
+
+                            // Tertiary
+                            tertiary: '#006950',
+                            'on-tertiary': '#ffffff',
+                            'tertiary-container': '#008566',
+                            'on-tertiary-container': '#f5fff8',
+                            'tertiary-fixed': '#61fccb',
+                            'tertiary-fixed-dim': '#3cdfb0',
+                            'on-tertiary-fixed': '#002117',
+                            'on-tertiary-fixed-variant': '#00513d',
+
+                            // Semantic
+                            error: '#ba1a1a',
+                            'on-error': '#ffffff',
+                            'error-container': '#ffdad6',
+                            'on-error-container': '#93000a',
+                            warning: '#b85e00',
+                            'on-warning': '#ffffff',
+                            'warning-container': '#ffdcc2',
+                            'on-warning-container': '#3a1a00',
+                            information: '#00639b',
+                            'on-information': '#ffffff',
+                            'information-container': '#cce8ff',
+                            'on-information-container': '#001d33',
+                            success: '#006b1d',
+                            'on-success': '#ffffff',
+                            'success-container': '#84fc87',
+                            'on-success-container': '#002204',
+
+                            // AI
+                            ai: '#0d9488',
+                            'on-ai': '#ffffff',
+                            'ai-container': '#ccfbf1',
+                            'on-ai-container': '#002b23',
+
+                            // Surface
+                            background: '#f9f9f9',
+                            'on-background': '#1a1c1c',
+                            surface: '#f9f9f9',
+                            'on-surface': '#1a1c1c',
+                            'surface-dim': '#dadada',
+                            'surface-bright': '#f9f9f9',
+                            'surface-subtle': '#f3f3f4',
+                            'surface-elevated': '#ffffff',
+                            'surface-variant': '#e2e2e2',
+                            'on-surface-variant': '#3e4a3c',
+                            'surface-container-low': '#f3f3f4',
+                            'surface-container': '#eeeeee',
+                            'surface-container-high': '#e8e8e8',
+                            'surface-container-highest': '#e2e2e2',
+                            'surface-container-lowest': '#ffffff',
+                            'inverse-surface': '#2f3131',
+                            'inverse-on-surface': '#f0f1f1',
+                            'surface-tint': '#006e1e',
+
+                            // Outline
+                            outline: '#6e7b6a',
+                            'outline-variant': '#bdcab8',
+                            'border-focus': '#006b1d',
+
+                            // Selection
+                            selection: '#0062a2',
+
+                            // Surface interaction states
+                            'surface-hover': 'rgba(0, 107, 29, 0.06)',
+                            'surface-selected': 'rgba(0, 107, 29, 0.10)',
+                            'surface-drag': 'rgba(0, 107, 29, 0.14)',
+                            'surface-disabled': 'rgba(0, 0, 0, 0.04)',
+                            'on-surface-disabled': 'rgba(0, 0, 0, 0.26)',
+
+                            // Chart
+                            'chart-1': '#006b1d',
+                            'chart-2': '#0d9488',
+                            'chart-3': '#b85e00',
+                            'chart-4': '#0062a2',
+                            'chart-5': '#7c3aed',
+                            'chart-positive': '#006b1d',
+                            'chart-negative': '#ba1a1a',
+                            'chart-neutral': '#6e7b6a',
+                            'chart-forecast': 'rgba(0, 107, 29, 0.30)',
+                            'chart-confidence': 'rgba(13, 148, 136, 0.15)',
                         },
                         fontFamily: {
-                            sans: ['Google Sans', 'Murecho', 'system-ui', 'sans-serif'],
+                            sans: ['Google Sans', 'system-ui', 'sans-serif'],
+                            headline: ['Google Sans', 'system-ui', 'sans-serif'],
+                            display: ['Google Sans', 'system-ui', 'sans-serif'],
+                            body: ['Google Sans', 'system-ui', 'sans-serif'],
+                            label: ['Murecho', 'sans-serif'],
+                            mono: ['SF Mono', 'JetBrains Mono', 'Fira Code', 'monospace'],
+                        },
+                        fontSize: {
+                            'display-hero': ['72px', { lineHeight: '80px', fontWeight: '800', letterSpacing: '-0.04em' }],
+                            'display-hero-mobile': ['40px', { lineHeight: '44px', fontWeight: '800', letterSpacing: '-0.02em' }],
+                            'headline-xl': ['48px', { lineHeight: '56px', fontWeight: '700', letterSpacing: '-0.03em' }],
+                            'headline-lg': ['36px', { lineHeight: '44px', fontWeight: '700', letterSpacing: '-0.02em' }],
+                            'headline-md': ['28px', { lineHeight: '36px', fontWeight: '600' }],
+                            'headline-sm': ['20px', { lineHeight: '28px', fontWeight: '600' }],
+                            'body-lg': ['18px', { lineHeight: '28px', fontWeight: '400' }],
+                            'body-md': ['16px', { lineHeight: '24px', fontWeight: '400' }],
+                            'body-sm': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+                            'caption': ['12px', { lineHeight: '16px', fontWeight: '400' }],
+                            'button': ['14px', { lineHeight: '20px', fontWeight: '500', letterSpacing: '0.01em' }],
+                            'navigation': ['14px', { lineHeight: '20px', fontWeight: '500' }],
+                            'sidebar': ['13px', { lineHeight: '18px', fontWeight: '400' }],
+                            'table': ['13px', { lineHeight: '18px', fontWeight: '400' }],
+                            'code': ['13px', { lineHeight: '20px', fontWeight: '400', letterSpacing: '0.02em' }],
+                            'label-mono': ['12px', { lineHeight: '16px', fontWeight: '400', letterSpacing: '0.05em' }],
+                        },
+                        borderRadius: {
+                            'none': '0px',
+                            'xs': '0.125rem',
+                            'sm': '0.25rem',
+                            'DEFAULT': '0.5rem',
+                            'md': '0.75rem',
+                            'lg': '1rem',
+                            'full': '9999px',
+                        },
+                        boxShadow: {
+                            'sm': '0 1px 2px rgba(0, 0, 0, 0.04)',
+                            'md': '0 4px 6px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02)',
+                            'lg': '0 10px 15px rgba(0, 0, 0, 0.04), 0 4px 6px rgba(0, 0, 0, 0.02)',
+                            'glow': '0 0 40px rgba(0, 107, 29, 0.10)',
+                            'focus': '0 0 0 3px rgba(0, 107, 29, 0.20)',
+                        },
+                        spacing: {
+                            'gutter': '24px',
+                            'edge': '40px',
+                            'section': '120px',
+                        },
+                        zIndex: {
+                            'base': '0',
+                            'dropdown': '100',
+                            'sticky': '200',
+                            'overlay': '300',
+                            'modal': '400',
+                            'toast': '500',
+                            'tooltip': '600',
+                        },
+                        opacity: {
+                            'disabled': '0.38',
+                            'hover': '0.08',
+                            'pressed': '0.12',
+                            'drag': '0.16',
+                            'glass': '0.06',
+                        },
+                        blur: {
+                            'sm': '8px',
+                            'md': '16px',
+                            'lg': '24px',
                         },
                     },
                 },
@@ -49,27 +192,108 @@
         } catch (_e) {}
     </script>
     <style>
+        /* ===== Glass Surface — accent only (overlays, modals, floating panels) ===== */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 107, 94, 0.1);
+            border: 1px solid rgba(0, 107, 29, 0.10);
         }
         .dark .glass-panel {
-            background: rgba(30, 30, 30, 0.7);
+            background: rgba(30, 30, 30, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        /* ===== Deep Glass — premium floating surfaces ===== */
+        .deep-glass {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+        }
+        .dark .deep-glass {
+            background: rgba(26, 28, 28, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        /* ===== Spatial Container — replaces generic cards ===== */
+        .spatial-container {
+            background: #f3f3f4;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .dark .spatial-container {
+            background: rgba(30, 30, 30, 0.8);
+        }
+
+        /* ===== Emerald Glow — active elevation ===== */
         .emerald-glow {
-            box-shadow: 0 0 20px rgba(0, 107, 94, 0.08);
+            box-shadow: 0 0 40px rgba(0, 107, 29, 0.10);
         }
-        .message-enter {
-            animation: slideIn 0.3s ease-out;
+        .emerald-protocol-glow {
+            box-shadow: 0 0 30px rgba(0, 107, 29, 0.15);
+            border: 1px solid rgba(0, 107, 29, 0.2) !important;
         }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        /* ===== Action Card — hover lift effect ===== */
+        .action-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
+        .action-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            background: rgba(0, 107, 29, 0.05);
+            border-color: rgba(0, 107, 29, 0.4);
+            box-shadow: 0 12px 40px rgba(0, 107, 29, 0.1);
+        }
+
+        /* ===== Emerald Glass Card — for projects ===== */
+        .emerald-glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .emerald-glass-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 107, 29, 0.3);
+            box-shadow: 0 20px 40px -15px rgba(0, 107, 29, 0.15);
+        }
+
+        /* ===== Status Pulse ===== */
+        .status-pulse {
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+        }
+
+        /* ===== Glow Line Separator ===== */
+        .glow-line {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 107, 29, 0.15), transparent);
+        }
+
+        /* ===== AI Animations ===== */
+        .ai-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.05); }
+        }
+
+        .ai-scan {
+            animation: scan 3s linear infinite;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(400px); }
+        }
+
         .typing-dot {
-            animation: typingBounce 1.4s infinite ease-in-out;
+            animation: typingBounce 1.2s ease-in-out infinite;
         }
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
@@ -77,6 +301,55 @@
             0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
             40% { transform: scale(1); opacity: 1; }
         }
+
+        .message-enter {
+            animation: slideIn 0.25s cubic-bezier(0.0, 0, 0.2, 1);
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Premium Animations (from main.html) ===== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes floatOrb {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-12px) scale(1.03); }
+        }
+        @keyframes barPulse {
+            0%, 100% { height: 0.5rem; opacity: 0.4; }
+            50% { height: 1.5rem; opacity: 0.9; }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 107, 29, 0.1); }
+            50% { box-shadow: 0 0 40px rgba(0, 107, 29, 0.3); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .animate-fade-in-up-fast { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .animate-float { animation: floatOrb 8s ease-in-out infinite; }
+        .pulse-bar { animation: barPulse 1.4s ease-in-out infinite; }
+        .animate-scale-in { animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-slide-up { animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-glow-pulse {
+            animation: glowPulse 3s ease-in-out infinite;
+        }
+        @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 107, 29, 0.1); }
+            50% { box-shadow: 0 0 40px rgba(0, 107, 29, 0.25); }
+        }
+
+        /* ===== Scrollbar Styling ===== */
         .scrollbar-thin::-webkit-scrollbar {
             width: 6px;
         }
@@ -84,76 +357,116 @@
             background: transparent;
         }
         .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: rgba(0, 107, 94, 0.2);
+            background: rgba(0, 107, 29, 0.15);
             border-radius: 3px;
         }
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 107, 94, 0.4);
+            background: rgba(0, 107, 29, 0.30);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #bdcab8; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #006b1d; }
+
+        /* ===== Focus Ring ===== */
+        .focus-ring:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 107, 29, 0.20);
+        }
+
+        /* ===== Material Symbols defaults ===== */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* ===== Reduced Motion ===== */
+        @media (prefers-reduced-motion: reduce) {
+            .ai-pulse, .ai-scan, .typing-dot, .message-enter,
+            .animate-fade-in-up, .animate-float, .pulse-bar,
+            .action-card, .emerald-glass-card {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+            }
         }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-background text-on-background overflow-hidden">
+<body class="bg-background text-on-surface overflow-hidden font-body">
+    <!-- Dynamic Background Canvas (optional, pages can override) -->
+    {% block background_canvas %}{% endblock %}
+
+    <!-- Skip link for accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-tooltip focus:px-4 focus:py-2 focus:bg-primary focus:text-on-primary focus:rounded focus:shadow-focus">
+        Перейти к содержимому
+    </a>
+
     <!-- Header -->
-    <header class="flex justify-between items-center px-8 h-16 w-full fixed top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 shadow-sm">
+    <header class="flex justify-between items-center px-8 h-16 w-full fixed top-0 z-sticky bg-surface/80 backdrop-blur-md border-b border-outline-variant/10 shadow-sm">
         <div class="flex items-center gap-6">
-            <a href="/" class="flex items-center gap-2 text-xl font-bold text-primary">
-                <span class="material-symbols-outlined text-2xl">psychology</span>
+            <a href="/" class="flex items-center gap-2 text-headline-sm font-bold text-primary">
+                <span class="material-symbols-outlined text-icon-md">psychology</span>
                 CorpAI
             </a>
-            <nav class="hidden md:flex items-center gap-6 ml-8" id="main-nav">
-                <a href="/chat" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg {% if active_page == 'chat' %}bg-primary-container/40 text-primary{% else %}text-on-surface-variant hover:bg-surface-variant/30{% endif %} transition-all">
-                    <span class="material-symbols-outlined text-lg">chat</span>
+            <nav class="hidden md:flex items-center gap-6 ml-8" id="main-nav" aria-label="Основная навигация">
+                <a href="/" class="flex items-center gap-2 px-3 py-2 text-navigation rounded-lg {% if active_page == 'main' or active_page == 'chat' %}bg-primary-container/20 text-primary{% else %}text-on-surface-variant hover:bg-surface-hover{% endif %} transition-all duration-150">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">chat</span>
                     Чат
                 </a>
-                <a href="/documents" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg {% if active_page == 'documents' %}bg-primary-container/40 text-primary{% else %}text-on-surface-variant hover:bg-surface-variant/30{% endif %} transition-all">
-                    <span class="material-symbols-outlined text-lg">description</span>
+                <a href="/library" class="flex items-center gap-2 px-3 py-2 text-navigation rounded-lg {% if active_page == 'library' %}bg-primary-container/20 text-primary{% else %}text-on-surface-variant hover:bg-surface-hover{% endif %} transition-all duration-150">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">book_2</span>
+                    Библиотека
+                </a>
+                <a href="/projects" class="flex items-center gap-2 px-3 py-2 text-navigation rounded-lg {% if active_page == 'projects' %}bg-primary-container/20 text-primary{% else %}text-on-surface-variant hover:bg-surface-hover{% endif %} transition-all duration-150">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">folder_shared</span>
+                    Проекты
+                </a>
+                <a href="/documents" class="flex items-center gap-2 px-3 py-2 text-navigation rounded-lg {% if active_page == 'documents' %}bg-primary-container/20 text-primary{% else %}text-on-surface-variant hover:bg-surface-hover{% endif %} transition-all duration-150">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">description</span>
                     Документы
                 </a>
-                <a href="/dashboard" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg {% if active_page == 'dashboard' %}bg-primary-container/40 text-primary{% else %}text-on-surface-variant hover:bg-surface-variant/30{% endif %} transition-all">
-                    <span class="material-symbols-outlined text-lg">dashboard</span>
+                <a href="/dashboard" class="flex items-center gap-2 px-3 py-2 text-navigation rounded-lg {% if active_page == 'dashboard' %}bg-primary-container/20 text-primary{% else %}text-on-surface-variant hover:bg-surface-hover{% endif %} transition-all duration-150">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">dashboard</span>
                     Дашборд
                 </a>
             </nav>
         </div>
         <div class="flex items-center gap-4">
-            <button id="theme-toggle" class="p-2 rounded-full hover:bg-surface-variant/30 transition-all" title="Переключить тему">
-                <span class="material-symbols-outlined text-on-surface-variant">dark_mode</span>
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-surface-hover transition-all duration-150" title="Переключить тему" aria-label="Переключить тему">
+                <span class="material-symbols-outlined text-on-surface-variant text-icon-sm" aria-hidden="true">dark_mode</span>
             </button>
 
             <!-- User info (shown when authenticated) -->
-            <div id="user-info" class="hidden flex items-center gap-2 px-3 py-1.5 bg-primary-container/30 rounded-full">
-                <span class="material-symbols-outlined text-sm text-primary">person</span>
-                <span id="user-name" class="text-sm font-medium text-primary">Пользователь</span>
+            <div id="user-info" class="hidden flex items-center gap-2 px-3 py-1.5 bg-primary-container/20 rounded-full">
+                <span class="material-symbols-outlined text-icon-xs text-primary" aria-hidden="true">person</span>
+                <span id="user-name" class="text-caption font-medium text-primary">Пользователь</span>
             </div>
 
             <!-- Login button (shown when not authenticated) -->
-            <a id="login-btn" href="/login" class="hidden px-4 py-1.5 bg-primary text-on-primary rounded-full text-sm font-medium hover:bg-primary/90 transition-all">
+            <a id="login-btn" href="/login" class="hidden px-4 py-1.5 bg-primary text-on-primary rounded-full text-button font-medium hover:bg-primary-hover transition-all duration-150">
                 Войти
             </a>
 
             <!-- Logout button -->
-            <button id="logout-btn" class="hidden p-2 rounded-full hover:bg-surface-variant/30 transition-all" title="Выйти">
-                <span class="material-symbols-outlined text-on-surface-variant">logout</span>
+            <button id="logout-btn" class="hidden p-2 rounded-full hover:bg-surface-hover transition-all duration-150" title="Выйти" aria-label="Выйти">
+                <span class="material-symbols-outlined text-on-surface-variant text-icon-sm" aria-hidden="true">logout</span>
             </button>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="pt-16 h-screen relative overflow-hidden">
+    <main id="main-content" class="pt-16 h-screen relative overflow-hidden">
         {% block content %}{% endblock %}
     </main>
 
     <script>
         // ===================== Auth State =====================
-        // Helper: get cookie value by name
         function getCookie(name) {
             const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
             return match ? decodeURIComponent(match[2]) : null;
         }
 
-        // Токен для API-запросов (fetch) берём из localStorage
-        // Для HTML-навигации токен автоматически отправляется через cookie
         const accessToken = localStorage.getItem('access_token') || getCookie('access_token');
         const refreshToken = localStorage.getItem('refresh_token');
         const userInfo = document.getElementById('user-info');
@@ -164,7 +477,6 @@
 
         async function loadUser() {
             if (!accessToken) {
-                // Not authenticated
                 loginBtn.classList.remove('hidden');
                 userInfo.classList.add('hidden');
                 logoutBtn.classList.add('hidden');
@@ -172,8 +484,6 @@
             }
 
             try {
-                // Используем cookie (автоматически отправляется браузером)
-                // или Authorization header из localStorage
                 const headers = {};
                 if (accessToken) {
                     headers['Authorization'] = `Bearer ${accessToken}`;
@@ -187,7 +497,6 @@
                     loginBtn.classList.add('hidden');
                     logoutBtn.classList.remove('hidden');
                 } else {
-                    // Token expired — try refresh
                     if (refreshToken) {
                         const refreshResponse = await fetch('/api/v1/auth/refresh', {
                             method: 'POST',
@@ -199,12 +508,10 @@
                             const data = await refreshResponse.json();
                             localStorage.setItem('access_token', data.access_token);
                             localStorage.setItem('refresh_token', data.refresh_token);
-                            // Retry loading user
                             return loadUser();
                         }
                     }
 
-                    // Can't refresh — show login
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('refresh_token');
                     loginBtn.classList.remove('hidden');
@@ -217,7 +524,6 @@
             }
         }
 
-        // Logout
         logoutBtn.addEventListener('click', async () => {
             if (refreshToken) {
                 try {
@@ -236,12 +542,10 @@
 
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
-            // Удаляем cookie (устанавливаем с истёкшим сроком)
             document.cookie = 'access_token=; max-age=0; path=/';
             window.location.href = '/login';
         });
 
-        // Load user on page load
         loadUser();
 
         // ===================== Theme Toggle =====================
@@ -255,7 +559,6 @@
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         });
 
-        // Restore theme
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') {
             html.classList.add('dark');

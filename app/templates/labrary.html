@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Библиотека — CorpAI Intelligence{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Library page specific styles — reserved for future overrides */
+</style>
+{% endblock %}
+
+{% block background_canvas %}
+<div class="fixed inset-0 z-0 pointer-events-none" id="background-canvas">
+    <div class="absolute rounded-full opacity-[0.08] filter blur-[120px] transition-all duration-[15000ms]" style="width: 600px; height: 600px; background: rgb(0, 107, 29); left: 73.2532%; top: 11.874%; transform: scale(0.886722);"></div>
+    <div class="absolute rounded-full opacity-[0.08] filter blur-[120px] transition-all duration-[15000ms]" style="width: 800px; height: 800px; background: rgb(60, 223, 176); right: -10%; top: 22.9904%; left: 43.0964%; transform: scale(0.949608);"></div>
+    <div class="absolute rounded-full opacity-[0.08] filter blur-[120px] transition-all duration-[15000ms]" style="width: 500px; height: 500px; background: rgb(175, 248, 52); left: 66.5788%; bottom: -10%; top: 40.4855%; transform: scale(1.18033);"></div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="h-full overflow-y-auto scrollbar-thin z-10 relative">
+    <div class="max-w-[1440px] mx-auto p-12">
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 animate-fade-in-up">
+            <div>
+                <h1 class="text-5xl font-extrabold tracking-tight text-on-surface mb-2">База <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary-fixed-dim">Знаний</span></h1>
+                <div class="flex items-center gap-3">
+                    <span class="flex gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    </span>
+                    <p class="text-on-surface-variant font-label uppercase tracking-[0.2em] text-[10px] font-bold">{{ total_count }} активных интеллектуальных активов</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="bg-white/80 border border-outline-variant/20 text-on-surface px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-primary hover:text-on-primary transition-all duration-300 shadow-sm">
+                    <span class="material-symbols-outlined text-lg">upload_file</span>
+                    Пакетная загрузка
+                </button>
+            </div>
+        </header>
+
+        <!-- Sophisticated Filter Bar -->
+        <div class="deep-glass p-2 rounded-3xl flex flex-col lg:flex-row items-center gap-4 mb-12 border border-white/50 animate-fade-in-up" style="animation-delay: 0.1s">
+            <div class="relative flex-1 w-full lg:w-auto">
+                <span class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-primary/60">auto_awesome</span>
+                <input class="w-full bg-transparent border-none pl-14 pr-4 py-4 text-on-surface focus:ring-0 placeholder:text-outline/40 font-medium" placeholder="Поиск по базе знаний..." type="text">
+            </div>
+            <div class="h-10 w-px bg-outline-variant/20 hidden lg:block"></div>
+            <div class="flex items-center gap-2 p-1">
+                <button class="px-6 py-2.5 bg-primary text-on-primary rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-primary/20">Все</button>
+                <button class="px-6 py-2.5 hover:bg-white/50 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-all">Документы</button>
+                <button class="px-6 py-2.5 hover:bg-white/50 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-all">Медиа</button>
+                <button class="px-6 py-2.5 hover:bg-white/50 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-all">Система</button>
+                <div class="w-px h-8 bg-outline-variant/10 mx-2"></div>
+                <button class="p-3 hover:bg-white/50 rounded-full text-on-surface-variant transition-all">
+                    <span class="material-symbols-outlined text-xl">tune</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Documents Section -->
+        <section class="mb-16 animate-fade-in-up" style="animation-delay: 0.2s">
+            <h3 class="font-label uppercase tracking-[0.3em] text-[11px] text-primary font-bold mb-8 flex items-center gap-4">
+                <span class="h-px w-12 bg-gradient-to-r from-primary to-transparent"></span>
+                Последние документы
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {% for doc in documents %}
+                <div class="action-card p-6 rounded-[2.5rem] cursor-pointer group" style="animation-delay: {{ 0.3 + loop.index0 * 0.1 }}s">
+                    <div class="w-full h-44 bg-surface-container-low/30 rounded-3xl mb-6 flex items-center justify-center relative overflow-hidden">
+                        <span class="material-symbols-outlined text-6xl text-primary/20 group-hover:scale-125 transition-transform duration-700 ease-out">
+                            {% if doc.filename.endswith('.pdf') %}picture_as_pdf
+                            {% elif doc.filename.endswith('.docx') %}description
+                            {% elif doc.filename.endswith('.xlsx') %}table_chart
+                            {% else %}insert_drive_file{% endif %}
+                        </span>
+                        <div class="absolute inset-x-0 bottom-0 h-1.5 bg-primary/20 scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                    </div>
+                    <h4 class="font-headline font-bold text-on-surface mb-2 px-1 truncate">{{ doc.filename }}</h4>
+                    <div class="flex justify-between items-center px-1">
+                        <span class="text-[10px] text-on-surface-variant font-label font-bold uppercase tracking-tighter">{{ doc.mime_type or 'Документ' }}</span>
+                        <span class="text-[9px] text-outline font-label font-bold uppercase">{{ doc.created_at.strftime('%d.%m.%Y') if doc.created_at else '' }}</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                    <span class="material-symbols-outlined text-icon-lg text-on-surface-variant/20 mb-4" aria-hidden="true">folder_open</span>
+                    <p class="text-body-md text-on-surface-variant/60">Нет загруженных документов</p>
+                    <p class="text-body-sm text-on-surface-variant/40 mt-1">Загрузите первый документ, чтобы начать работу</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Visual Assets Section -->
+        <section class="animate-fade-in-up" style="animation-delay: 0.4s">
+            <h3 class="font-label uppercase tracking-[0.3em] text-[11px] text-primary font-bold mb-8 flex items-center gap-4">
+                <span class="h-px w-12 bg-gradient-to-r from-primary to-transparent"></span>
+                Визуальные активы
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="action-card p-4 rounded-[2.5rem] cursor-pointer group animate-fade-in-up" style="animation-delay: 0.5s">
+                    <div class="w-full h-52 rounded-3xl mb-4 overflow-hidden bg-white/50 border border-white/40 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-6xl text-primary/20 group-hover:scale-110 transition-transform duration-1000">image</span>
+                    </div>
+                    <div class="px-3 pb-2">
+                        <h4 class="font-headline font-bold text-on-surface truncate">Бренд-пакет CorpAI</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[9px] text-on-surface-variant font-label font-bold uppercase">Векторный мастер</span>
+                            <span class="text-[9px] text-primary font-bold uppercase tracking-widest">Заблокировано</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-card p-4 rounded-[2.5rem] cursor-pointer group animate-fade-in-up" style="animation-delay: 0.6s">
+                    <div class="w-full h-52 rounded-3xl mb-4 overflow-hidden bg-primary/5 flex items-center justify-center border border-primary/10">
+                        <span class="material-symbols-outlined text-6xl text-secondary/20 group-hover:scale-105 transition-transform duration-1000">palette</span>
+                    </div>
+                    <div class="px-3 pb-2">
+                        <h4 class="font-headline font-bold text-on-surface truncate">Иконка интерфейса</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[9px] text-on-surface-variant font-label font-bold uppercase">Нативный мобайл</span>
+                            <span class="text-[9px] text-outline font-bold uppercase">Rev 4</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-card p-4 rounded-[2.5rem] cursor-pointer group animate-fade-in-up" style="animation-delay: 0.7s">
+                    <div class="w-full h-52 rounded-3xl mb-4 overflow-hidden bg-[#e8f5e9]/40 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-6xl text-tertiary/20 group-hover:rotate-12 group-hover:scale-125 transition-all duration-1000 ease-out">neurology</span>
+                    </div>
+                    <div class="px-3 pb-2">
+                        <h4 class="font-headline font-bold text-on-surface truncate">Нейросфера</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[9px] text-on-surface-variant font-label font-bold uppercase">3D Рендер</span>
+                            <span class="text-[9px] text-primary font-bold uppercase">Активно</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-card p-4 rounded-[2.5rem] cursor-pointer group animate-fade-in-up" style="animation-delay: 0.8s">
+                    <div class="w-full h-52 rounded-3xl mb-4 overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent z-10 mix-blend-overlay"></div>
+                        <span class="material-symbols-outlined text-6xl text-primary/20 group-hover:scale-110 transition-transform duration-[2000ms] w-full h-full flex items-center justify-center">auto_awesome</span>
+                    </div>
+                    <div class="px-3 pb-2">
+                        <h4 class="font-headline font-bold text-on-surface truncate">Генеративная абстракция</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[9px] text-on-surface-variant font-label font-bold uppercase">AI Gen 01</span>
+                            <span class="text-[9px] text-outline font-bold uppercase">Архив</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Floating Action for Mobile / Quick Intelligence -->
+<div class="fixed bottom-10 right-10 z-50 animate-fade-in-up" style="animation-delay: 1s">
+    <button class="w-16 h-16 bg-primary text-on-primary rounded-2xl shadow-[0_12px_40px_rgba(0,107,29,0.4)] flex items-center justify-center hover:scale-110 hover:-translate-y-2 active:scale-95 transition-all duration-300 animate-glow-pulse">
+        <span class="material-symbols-outlined text-2xl">auto_fix_high</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Background Motion Logic
+    const backgroundContainer = document.getElementById('background-canvas');
+    const orbs = backgroundContainer.querySelectorAll('div');
+
+    function animateBackground() {
+        orbs.forEach((orb, i) => {
+            const nextX = Math.random() * 80 + 10;
+            const nextY = Math.random() * 80 + 10;
+            const nextScale = 0.8 + Math.random() * 0.4;
+
+            orb.style.left = nextX + '%';
+            orb.style.top = nextY + '%';
+            orb.style.transform = `scale(${nextScale})`;
+        });
+    }
+
+    setInterval(animateBackground, 15000);
+    animateBackground();
+
+    // Search Bar Focus Effects
+    const searchInputs = document.querySelectorAll('input');
+    searchInputs.forEach(input => {
+        input.addEventListener('focus', () => {
+            const container = input.closest('.deep-glass') || input.parentElement;
+            container.classList.add('emerald-protocol-glow');
+        });
+        input.addEventListener('blur', () => {
+            const container = input.closest('.deep-glass') || input.parentElement;
+            container.classList.remove('emerald-protocol-glow');
+        });
+    });
+</script>
+{% endblock %}

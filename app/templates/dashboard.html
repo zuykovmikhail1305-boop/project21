@@ -2,117 +2,234 @@
 
 {% block title %}Дашборд — CorpAI Intelligence{% endblock %}
 
+{% block extra_head %}
+<style>
+    .stat-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    .chart-column {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .chart-column:hover {
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="h-full overflow-y-auto scrollbar-thin px-6 py-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-on-surface">Дашборд</h1>
-        <p class="text-sm text-on-surface-variant mt-1">Статистика и аналитика системы</p>
+<div class="h-full overflow-y-auto scrollbar-thin z-10 relative">
+    <div class="max-w-[1440px] mx-auto p-8">
+        <!-- Header Section -->
+        <div class="mb-10 flex justify-between items-end animate-fade-in-up">
+            <div>
+                <h1 class="text-headline-lg font-bold text-on-surface tracking-tight">Дашборд</h1>
+                <p class="text-body-md text-on-surface-variant mt-2">Статистика и аналитика системы CorpAI Intelligence</p>
+            </div>
+            <button class="flex items-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all active:scale-95">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+                Новый анализ
+            </button>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div class="stat-card spatial-container group animate-fade-in-up" style="animation-delay: 0.1s">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                        <span class="material-symbols-outlined text-[28px]">description</span>
+                    </div>
+                    <div>
+                        <span class="text-caption font-bold text-on-surface-variant/60 uppercase tracking-widest">Документов</span>
+                        <p class="text-headline-sm font-bold text-on-surface">{{ "{:,}".format(stats.total_documents).replace(',', ' ') }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-caption font-medium">
+                    <span class="text-primary font-bold">{{ stats.ready_documents }} готово</span>
+                    <span class="text-on-surface-variant/30">·</span>
+                    <span class="text-tertiary">{{ stats.processing_documents }} в обработке</span>
+                </div>
+            </div>
+            <div class="stat-card spatial-container group animate-fade-in-up" style="animation-delay: 0.15s">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-secondary-container/10 flex items-center justify-center text-secondary transition-colors group-hover:bg-secondary group-hover:text-white">
+                        <span class="material-symbols-outlined text-[28px]">database</span>
+                    </div>
+                    <div>
+                        <span class="text-caption font-bold text-on-surface-variant/60 uppercase tracking-widest">Чанков</span>
+                        <p class="text-headline-sm font-bold text-on-surface">{{ "{:,}".format(stats.total_chunks).replace(',', ' ') }}</p>
+                    </div>
+                </div>
+                <p class="text-caption text-on-surface-variant/60 font-medium">в векторной БД</p>
+            </div>
+            <div class="stat-card spatial-container group animate-fade-in-up" style="animation-delay: 0.2s">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-tertiary-container/10 flex items-center justify-center text-tertiary transition-colors group-hover:bg-tertiary group-hover:text-white">
+                        <span class="material-symbols-outlined text-[28px]">chat</span>
+                    </div>
+                    <div>
+                        <span class="text-caption font-bold text-on-surface-variant/60 uppercase tracking-widest">Сессии</span>
+                        <p class="text-headline-sm font-bold text-on-surface">{{ stats.total_sessions }}</p>
+                    </div>
+                </div>
+                <p class="text-caption text-on-surface-variant/60 font-medium">активных сессий</p>
+            </div>
+            <div class="stat-card spatial-container group animate-fade-in-up" style="animation-delay: 0.25s">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                        <span class="material-symbols-outlined text-[28px]">storage</span>
+                    </div>
+                    <div>
+                        <span class="text-caption font-bold text-on-surface-variant/60 uppercase tracking-widest">Хранилище</span>
+                        <p class="text-headline-sm font-bold text-on-surface">{{ stats.storage_used }}</p>
+                    </div>
+                </div>
+                <div class="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+                    {% set storage_pct = (stats.storage_used|replace(' MB', '')|float / 100 * 10) if 'MB' in stats.storage_used else 5 %}
+                    <div class="h-full bg-primary rounded-full transition-all duration-1000" style="width: {{ [storage_pct, 100]|min }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Grid: Bento Style -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Recent Documents -->
+            <div class="lg:col-span-7 spatial-container animate-fade-in-up" style="animation-delay: 0.3s">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-headline-sm font-bold text-on-surface">Последние документы</h2>
+                    <a href="/documents" class="text-button text-primary font-bold hover:underline">Все документы</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-outline-variant/10">
+                                <th class="py-4 text-caption font-bold text-on-surface-variant/60 uppercase tracking-widest">Имя файла</th>
+                                <th class="py-4 text-caption font-bold text-on-surface-variant/60 uppercase tracking-widest">Дата</th>
+                                <th class="py-4 text-caption font-bold text-on-surface-variant/60 uppercase tracking-widest text-right">Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant/5">
+                            {% if recent_documents %}
+                            {% for doc in recent_documents %}
+                            <tr class="hover:bg-primary/5 transition-colors group cursor-pointer" onclick="window.location.href='/documents/{{ doc.id }}'">
+                                <td class="py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                                            <span class="material-symbols-outlined text-icon-sm">
+                                                {%- if doc.filename.endswith('.pdf') -%}picture_as_pdf
+                                                {%- elif doc.filename.endswith('.docx') -%}description
+                                                {%- elif doc.filename.endswith('.xlsx') -%}table_chart
+                                                {%- else -%}insert_drive_file
+                                                {%- endif -%}
+                                            </span>
+                                        </div>
+                                        <span class="text-body-sm font-medium">{{ doc.filename }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 text-body-sm text-on-surface-variant">{{ doc.created_at.strftime('%d.%m.%Y %H:%M') if doc.created_at else '' }}</td>
+                                <td class="py-4 text-right">
+                                    {% set status = doc.status.value if doc.status else 'pending' %}
+                                    {% if status == 'ready' %}
+                                    <span class="px-3 py-1 rounded-full bg-primary-container/20 text-primary text-[11px] font-bold uppercase tracking-wider">ready</span>
+                                    {% elif status == 'processing' %}
+                                    <span class="px-3 py-1 rounded-full bg-tertiary-container/20 text-tertiary text-[11px] font-bold uppercase tracking-wider">processing</span>
+                                    {% elif status == 'error' %}
+                                    <span class="px-3 py-1 rounded-full bg-error-container/20 text-error text-[11px] font-bold uppercase tracking-wider">error</span>
+                                    {% else %}
+                                    <span class="px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-[11px] font-bold uppercase tracking-wider">{{ status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="py-8 text-center text-body-sm text-on-surface-variant">Нет загруженных документов</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Queries -->
+            <div class="lg:col-span-5 spatial-container flex flex-col animate-fade-in-up" style="animation-delay: 0.35s">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-headline-sm font-bold text-on-surface">Недавние запросы</h2>
+                </div>
+                <div class="space-y-4 flex-1">
+                    {% if recent_messages %}
+                    {% for msg in recent_messages %}
+                    <div class="p-4 rounded-xl border {% if msg.role == 'assistant' %}border-primary/20 bg-primary/5{% else %}border-outline-variant/10 hover:border-primary/30{% endif %} transition-all cursor-pointer">
+                        <div class="flex items-center gap-2 mb-2">
+                            {% if msg.role == 'user' %}
+                            <span class="material-symbols-outlined text-secondary text-icon-sm">person</span>
+                            <span class="text-caption font-bold text-on-surface-variant">Вы</span>
+                            {% else %}
+                            <span class="material-symbols-outlined text-primary text-icon-sm">psychology</span>
+                            <span class="text-caption font-bold text-primary">CorpAI</span>
+                            {% endif %}
+                            <span class="text-caption text-on-surface-variant/40 ml-auto">{{ msg.created_at.strftime('%H:%M') if msg.created_at else '' }}</span>
+                        </div>
+                        <p class="text-body-sm {% if msg.role == 'assistant' %}text-on-surface-variant/80 italic{% else %}text-on-surface font-medium{% endif %} leading-relaxed line-clamp-2">{{ msg.content[:150] }}{% if msg.content|length > 150 %}...{% endif %}</p>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="flex flex-col items-center justify-center py-12 text-center">
+                        <span class="material-symbols-outlined text-on-surface-variant/30 text-4xl mb-3">chat</span>
+                        <p class="text-body-sm text-on-surface-variant">Нет недавних запросов</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mt-6 pt-4 border-t border-outline-variant/10">
+                    <a href="/" class="block w-full py-2.5 rounded-lg border border-primary/20 text-primary font-bold text-button hover:bg-primary/5 transition-all text-center">Открыть чат</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Section -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 spatial-container h-64 relative overflow-hidden flex flex-col animate-fade-in-up" style="animation-delay: 0.4s">
+                <h3 class="text-body-sm font-bold text-on-surface mb-4">Активность обработки данных</h3>
+                <div class="flex-1 w-full flex items-end justify-between gap-1 mt-4">
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[40%] hover:bg-primary/40"></div>
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[60%] hover:bg-primary/40"></div>
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[35%] hover:bg-primary/40"></div>
+                    <div class="chart-column flex-1 bg-primary/60 rounded-t-sm h-[85%] hover:bg-primary/80"></div>
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[50%] hover:bg-primary/40"></div>
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[30%] hover:bg-primary/40"></div>
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[45%] hover:bg-primary/40"></div>
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[70%] hover:bg-primary/40"></div>
+                    <div class="chart-column flex-1 bg-primary/40 rounded-t-sm h-[90%] hover:bg-primary/60"></div>
+                    <div class="chart-column flex-1 bg-primary/20 rounded-t-sm h-[55%] hover:bg-primary/40"></div>
+                </div>
+            </div>
+            <div class="spatial-container flex flex-col justify-center items-center text-center animate-fade-in-up" style="animation-delay: 0.45s">
+                <div class="w-20 h-20 rounded-full border-4 border-secondary-container border-t-secondary animate-spin mb-4"></div>
+                <h3 class="text-body-md font-bold text-on-surface">Индексация в процессе</h3>
+                <p class="text-caption text-on-surface-variant mt-2 px-6">Система оптимизирует новые чанки для улучшения точности поиска.</p>
+            </div>
+        </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary">description</span>
-                </div>
-                <span class="text-sm font-medium text-on-surface-variant">Документов</span>
-            </div>
-            <p class="text-3xl font-bold text-on-surface" id="stat-documents">{{ stats.total_documents }}</p>
-            <p class="text-xs text-on-surface-variant/60 mt-1">
-                <span class="text-success">{{ stats.ready_documents }}</span> готово ·
-                <span class="text-warning">{{ stats.processing_documents }}</span> в обработке
-            </p>
-        </div>
-
-        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-lg bg-secondary-container/30 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-secondary">database</span>
-                </div>
-                <span class="text-sm font-medium text-on-surface-variant">Чанков</span>
-            </div>
-            <p class="text-3xl font-bold text-on-surface" id="stat-chunks">{{ stats.total_chunks }}</p>
-            <p class="text-xs text-on-surface-variant/60 mt-1">в векторной БД</p>
-        </div>
-
-        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-lg bg-tertiary-container/30 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-tertiary">chat</span>
-                </div>
-                <span class="text-sm font-medium text-on-surface-variant">Сессий чата</span>
-            </div>
-            <p class="text-3xl font-bold text-on-surface" id="stat-sessions">{{ stats.total_sessions }}</p>
-            <p class="text-xs text-on-surface-variant/60 mt-1">активных сессий</p>
-        </div>
-
-        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary">storage</span>
-                </div>
-                <span class="text-sm font-medium text-on-surface-variant">Хранилище</span>
-            </div>
-            <p class="text-3xl font-bold text-on-surface" id="stat-storage">{{ stats.storage_used }}</p>
-            <p class="text-xs text-on-surface-variant/60 mt-1">использовано</p>
-        </div>
-    </div>
-
-    <!-- Recent Activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
-            <h2 class="text-lg font-bold text-on-surface mb-4">Последние документы</h2>
-            <div class="space-y-3">
-                {% for doc in recent_documents %}
-                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-variant/20 transition-all">
-                    <div class="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-sm text-primary">
-                            {% if doc.filename.endswith('.pdf') %}picture_as_pdf
-                            {% elif doc.filename.endswith('.docx') %}description
-                            {% elif doc.filename.endswith('.xlsx') %}table_chart
-                            {% else %}insert_drive_file{% endif %}
-                        </span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-on-surface truncate">{{ doc.filename }}</p>
-                        <p class="text-xs text-on-surface-variant/60">{{ doc.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
-                    </div>
-                    <span class="text-xs px-2 py-0.5 rounded-full font-medium
-                        {% if doc.status == 'ready' %}bg-success-container/30 text-success
-                        {% elif doc.status == 'processing' %}bg-warning-container/30 text-warning
-                        {% else %}bg-error-container/30 text-error{% endif %}">
-                        {{ doc.status }}
-                    </span>
-                </div>
-                {% else %}
-                <p class="text-sm text-on-surface-variant/60 text-center py-8">Нет документов</p>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="glass-panel rounded-xl p-5 border border-outline-variant/10">
-            <h2 class="text-lg font-bold text-on-surface mb-4">Недавние запросы</h2>
-            <div class="space-y-3">
-                {% for msg in recent_messages %}
-                <div class="p-3 rounded-lg hover:bg-surface-variant/20 transition-all">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="material-symbols-outlined text-sm
-                            {% if msg.role == 'user' %}text-secondary{% else %}text-primary{% endif %}">
-                            {% if msg.role == 'user' %}person{% else %}psychology{% endif %}
-                        </span>
-                        <span class="text-xs font-medium text-on-surface-variant">
-                            {% if msg.role == 'user' %}Вы{% else %}CorpAI{% endif %}
-                        </span>
-                        <span class="text-xs text-on-surface-variant/40 ml-auto">{{ msg.created_at.strftime('%H:%M') }}</span>
-                    </div>
-                    <p class="text-sm text-on-surface-variant/80 truncate">{{ msg.content[:100] }}</p>
-                </div>
-                {% else %}
-                <p class="text-sm text-on-surface-variant/60 text-center py-8">Нет запросов</p>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
+    <!-- Ambient Background Pulse -->
+    <div class="fixed bottom-0 right-0 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full -z-10 pointer-events-none translate-x-1/3 translate-y-1/3 animate-float"></div>
+    <div class="fixed top-0 left-0 w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full -z-10 pointer-events-none -translate-x-1/3 -translate-y-1/3 animate-float" style="animation-delay: -5s"></div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Micro-interaction for hover states on spatial containers
+    document.querySelectorAll('.spatial-container').forEach(el => {
+        el.addEventListener('mousemove', e => {
+            const rect = el.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            el.style.setProperty('--mouse-x', `${x}px`);
+            el.style.setProperty('--mouse-y', `${y}px`);
+        });
+    });
+</script>
 {% endblock %}

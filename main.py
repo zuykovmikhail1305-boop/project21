@@ -126,4 +126,4 @@ async def root():
 
 if __name__ == "__main__":  # for local development only, use uvicorn command for production
     import uvicorn
-    uvicorn.run(fastapi_app, host="127.0.0.1", port=8000)
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)

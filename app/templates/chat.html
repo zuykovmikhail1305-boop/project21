@@ -4,10 +4,10 @@
 
 {% block extra_head %}
 <style>
-    /* Artifact Progress Card */
+    /* Artifact Progress Card — uses design system primary (#006b1d) and ai (#0d9488) tokens */
     .artifact-progress {
-        background: linear-gradient(135deg, rgba(0, 107, 94, 0.05), rgba(0, 107, 94, 0.02));
-        border: 1px solid rgba(0, 107, 94, 0.15);
+        background: linear-gradient(135deg, rgba(0, 107, 29, 0.05), rgba(0, 107, 29, 0.02));
+        border: 1px solid rgba(0, 107, 29, 0.15);
         border-radius: 16px;
         padding: 16px 20px;
         margin-top: 8px;
@@ -15,21 +15,21 @@
     }
     .artifact-progress-bar {
         height: 4px;
-        background: rgba(0, 107, 94, 0.1);
+        background: rgba(0, 107, 29, 0.1);
         border-radius: 2px;
         overflow: hidden;
         margin-top: 12px;
     }
     .artifact-progress-bar-fill {
         height: 100%;
-        background: linear-gradient(90deg, #006B5E, #00A894);
+        background: linear-gradient(90deg, #006b1d, #0d9488);
         border-radius: 2px;
         transition: width 0.5s ease;
         width: 0%;
     }
     .artifact-progress-stage {
         font-size: 0.8rem;
-        color: #006B5E;
+        color: #006b1d;
         font-weight: 500;
         display: flex;
         align-items: center;
@@ -38,8 +38,8 @@
     .artifact-progress-stage .spinner {
         width: 14px;
         height: 14px;
-        border: 2px solid rgba(0, 107, 94, 0.2);
-        border-top-color: #006B5E;
+        border: 2px solid rgba(0, 107, 29, 0.2);
+        border-top-color: #006b1d;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         display: inline-block;
@@ -55,7 +55,7 @@
         gap: 8px;
         padding: 6px 0;
         font-size: 0.85rem;
-        color: #404943;
+        color: #3e4a3c;
     }
     .chart-status .chart-icon {
         width: 20px;
@@ -68,22 +68,22 @@
         flex-shrink: 0;
     }
     .chart-status .chart-icon.generating {
-        background: rgba(0, 107, 94, 0.1);
-        color: #006B5E;
+        background: rgba(0, 107, 29, 0.1);
+        color: #006b1d;
     }
     .chart-status .chart-icon.ready {
-        background: rgba(0, 107, 94, 0.15);
-        color: #006B5E;
+        background: rgba(0, 107, 29, 0.15);
+        color: #006b1d;
     }
     .chart-status .chart-icon.error {
         background: rgba(186, 26, 26, 0.1);
-        color: #BA1A1A;
+        color: #ba1a1a;
     }
 
     /* Artifact ready card */
     .artifact-ready {
-        background: linear-gradient(135deg, rgba(0, 107, 94, 0.08), rgba(0, 107, 94, 0.03));
-        border: 1px solid rgba(0, 107, 94, 0.2);
+        background: linear-gradient(135deg, rgba(0, 107, 29, 0.08), rgba(0, 107, 29, 0.03));
+        border: 1px solid rgba(0, 107, 29, 0.2);
         border-radius: 16px;
         padding: 16px 20px;
         margin-top: 8px;
@@ -113,8 +113,8 @@
         color: #2563EB;
     }
     .artifact-ready .file-icon.html {
-        background: rgba(0, 107, 94, 0.12);
-        color: #006B5E;
+        background: rgba(0, 107, 29, 0.12);
+        color: #006b1d;
     }
     .artifact-ready .file-icon.md {
         background: rgba(107, 114, 128, 0.12);
@@ -125,7 +125,7 @@
         align-items: center;
         gap: 6px;
         padding: 8px 16px;
-        background: #006B5E;
+        background: #006b1d;
         color: white;
         border-radius: 10px;
         font-size: 0.85rem;
@@ -136,9 +136,9 @@
         border: none;
     }
     .artifact-download-btn:hover {
-        background: #00554A;
+        background: #005515;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 107, 94, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 107, 29, 0.3);
     }
     .artifact-download-btn:active {
         transform: translateY(0);
@@ -149,7 +149,7 @@
         border-radius: 12px;
         padding: 12px 16px;
         margin-top: 8px;
-        color: #BA1A1A;
+        color: #ba1a1a;
         font-size: 0.85rem;
         animation: slideIn 0.3s ease-out;
     }
@@ -367,17 +367,17 @@
                             totalCharts = charts.length;
 
                             let sectionsHtml = sections.map(s =>
-                                `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:0.8rem;color:#404943">
-                                    <span style="color:#006B5E">▸</span>
-                                    ${s.title}${s.requires_chart ? ' <span style="font-size:0.7rem;color:#006B5E">[график]</span>' : ''}
+                                `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:0.8rem;color:#3e4a3c">
+                                    <span style="color:#006b1d">▸</span>
+                                    ${s.title}${s.requires_chart ? ' <span style="font-size:0.7rem;color:#006b1d">[график]</span>' : ''}
                                 </div>`
                             ).join('');
 
                             let chartsHtml = '';
                             if (charts.length > 0) {
                                 chartsHtml = `
-                                    <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,107,94,0.1)">
-                                        <div style="font-size:0.75rem;color:#006B5E;font-weight:500;margin-bottom:4px">
+                                    <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,107,29,0.1)">
+                                        <div style="font-size:0.75rem;color:#006b1d;font-weight:500;margin-bottom:4px">
                                             📊 Графики (${chartEngine}): ${charts.length}
                                         </div>
                                     </div>
@@ -388,8 +388,8 @@
                                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
                                     <div style="font-size:1.2rem">📄</div>
                                     <div>
-                                        <div style="font-weight:600;font-size:0.9rem;color:#191C1A">${data.title}</div>
-                                        <div style="font-size:0.75rem;color:#006B5E;font-weight:500">${typeLabel}</div>
+                                        <div style="font-weight:600;font-size:0.9rem;color:#1a1c1c">${data.title}</div>
+                                        <div style="font-size:0.75rem;color:#006b1d;font-weight:500">${typeLabel}</div>
                                     </div>
                                 </div>
                                 ${sectionsHtml}
@@ -426,7 +426,7 @@
                                 <span class="material-symbols-outlined" style="font-size:14px">bar_chart</span>
                             </div>
                             <span style="flex:1">График ${chartIdx + 1}: ${chartTitle}</span>
-                            <span style="font-size:0.75rem;color:#006B5E">${engine}...</span>
+                            <span style="font-size:0.75rem;color:#006b1d">${engine}...</span>
                         `;
                         artifactChartsContainer.appendChild(chartRow);
 
@@ -449,7 +449,7 @@
                                     <span class="material-symbols-outlined" style="font-size:14px">check</span>
                                 </div>
                                 <span style="flex:1">График ${chartIdx + 1}</span>
-                                <span style="font-size:0.75rem;color:#006B5E">✓ готов</span>
+                                <span style="font-size:0.75rem;color:#006b1d">✓ готов</span>
                             `;
                         }
 
@@ -515,10 +515,10 @@
                             <div style="display:flex;align-items:center;gap:14px">
                                 <div class="file-icon ${artifactType}">${typeLabel}</div>
                                 <div style="flex:1;min-width:0">
-                                    <div style="font-weight:600;font-size:0.9rem;color:#191C1A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                    <div style="font-weight:600;font-size:0.9rem;color:#1a1c1c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                                         ${filename}
                                     </div>
-                                    <div style="font-size:0.75rem;color:#707973;margin-top:2px">
+                                    <div style="font-size:0.75rem;color:#6e7b6a;margin-top:2px">
                                         ${typeLabel}${sizeStr ? ' · ' + sizeStr : ''}
                                     </div>
                                 </div>
@@ -688,5 +688,13 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, 50);
     }
+
+    // Auto-submit initial query from main page search (must be after form submit listener)
+    {% if initial_query %}
+    (function() {
+        chatInput.value = {{ initial_query|tojson }};
+        chatForm.dispatchEvent(new Event('submit'));
+    })();
+    {% endif %}
 </script>
 {% endblock %}

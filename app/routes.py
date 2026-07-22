@@ -272,3 +272,17 @@ async def register_page(request: Request):
             "active_page": "register",
         },
     )
+
+
+@router.get("/401", response_class=HTMLResponse, include_in_schema=False)
+async def unauthorized_page(request: Request, detail: str = ""):
+    """401 Unauthorized page."""
+    tmpl = get_templates()
+    return tmpl.TemplateResponse(
+        request, "401.html",
+        {
+            "request": request,
+            "active_page": "401",
+            "detail": detail,
+        },
+    )

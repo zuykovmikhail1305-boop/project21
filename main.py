@@ -2,7 +2,7 @@ import app.routes
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -99,6 +99,32 @@ async def add_security_headers(request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+# === 401 Unauthorized Exception Handler ===
+
+
+@fastapi_app.exception_handler(HTTPException)
+async def unauthorized_exception_handler(request: Request, exc: HTTPException):
+    """Перехватывает HTTPException со статусом 401 и отображает страницу 401.html."""
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+        templates = get_templates()
+        return templates.TemplateResponse(
+            request,
+            "401.html",
+            {
+                "request": request,
+                "active_page": "401",
+                "detail": exc.detail if exc.detail else "",
+            },
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    # Для остальных HTTPException — стандартное поведение
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
 
 
 # === Static files ===

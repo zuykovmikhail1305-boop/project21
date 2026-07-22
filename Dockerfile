@@ -34,7 +34,8 @@ RUN pip install --no-cache-dir gunicorn
 FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
 
 # Install runtime system dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \

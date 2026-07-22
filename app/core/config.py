@@ -8,7 +8,7 @@ load_dotenv('.env')
 # === PostgreSQL ===
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/project21"
+    "postgresql://postgres:postgres@postgres:5432/project21"
 )
 
 engine = None
@@ -111,6 +111,10 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 EMBEDDING_DEVICE = os.getenv("EMBEDDING_DEVICE", "cpu")  # "cpu" | "cuda"
 
 
+# === Reranker (Cross-Encoder) ===
+RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+
 # === ACL ===
 ACL_DEFAULT_DENY = os.getenv("ACL_DEFAULT_DENY", "true").lower() == "true"
 
@@ -126,6 +130,13 @@ LOCAL_STORAGE_PATH = os.getenv("LOCAL_STORAGE_PATH", "./storage")
 
 ### === Hugging Face Token ===
 HF_TOKEN = os.getenv("HF_TOKEN", "")
+
+
+# === CORS ===
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000"
+).split(",")
 
 
 # === Sparse Search (BM25) ===

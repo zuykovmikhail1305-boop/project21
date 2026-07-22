@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 
-from app.core.config import Base, SessionLocal, _build_engine
+from app.core.config import Base, SessionLocal, _build_engine, CORS_ORIGINS
 from app.models import *  # noqa: F401, F403 — регистрация всех моделей в Base.metadata
 from app.core.seed import seed_groups
 from app.api.v1.api import api_router
@@ -40,36 +40,84 @@ async def lifespan(app: FastAPI):
 
     try:
         logger.info("Preloading cross-encoder model...")
+        from app.core import config as app_config
         from app.services.reranker import Reranker
-        reranker = Reranker()
+        reranker = Reranker(model_name=app_config.RERANKER_MODEL)
         reranker._load_model()
-        logger.info("Cross-encoder model preloaded successfully")
+        logger.info("Cross-encoder model '%s' preloaded successfully", app_config.RERANKER_MODEL)
     except Exception as e:
         logger.warning("Failed to preload cross-encoder model: %s", e)
 
-    engine, local_session = _build_engine()
+    # --- Database initialization with retry ---
+    import time
+    from sqlalchemy import text
+
+    engine = None
+    local_session = None
+
+    max_retries = 5
+    retry_delay = 3  # seconds
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            engine, local_session = _build_engine()
+            if engine is None or local_session is None:
+                raise RuntimeError("_build_engine() returned None")
+
+            # Проверяем соединение с БД
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("Database connection established (attempt %d/%d)", attempt, max_retries)
+            break
+        except Exception as e:
+            logger.warning(
+                "Database connection failed (attempt %d/%d): %s",
+                attempt, max_retries, e,
+            )
+            engine = None
+            local_session = None
+            if attempt < max_retries:
+                logger.info("Retrying in %d seconds...", retry_delay)
+                time.sleep(retry_delay)
 
     if engine is not None and local_session is not None:
+        # --- Create all tables ---
         try:
+            logger.info("Creating database tables via Base.metadata.create_all...")
             Base.metadata.create_all(bind=engine)
-        except Exception:
-            pass
+            logger.info("Database tables created/verified successfully")
+        except Exception as e:
+            logger.error("Failed to create database tables: %s", e)
+            logger.error(
+                "Ensure the database 'project21' exists. "
+                "On VPS, run: docker compose exec postgres createdb -U postgres project21"
+            )
 
+        # --- Seed default data ---
         db = local_session()
         try:
             seed_groups(db)
-        except Exception:
-            pass
+            logger.info("Seed data applied successfully")
+        except Exception as e:
+            logger.warning("Failed to apply seed data: %s", e)
         finally:
             db.close()
+    else:
+        logger.error(
+            "Database is not available after %d retries. "
+            "The application will start but database-dependent features will fail.",
+            max_retries,
+        )
 
     yield
 
     if engine is not None:
         try:
+            logger.info("Dropping all tables on shutdown...")
             Base.metadata.drop_all(bind=engine)
-        except Exception:
-            pass
+            logger.info("All tables dropped")
+        except Exception as e:
+            logger.warning("Failed to drop tables on shutdown: %s", e)
 
 
 fastapi_app = FastAPI(title="CorpAI Intelligence", version="0.1.0", lifespan=lifespan)
@@ -77,11 +125,7 @@ fastapi_app = FastAPI(title="CorpAI Intelligence", version="0.1.0", lifespan=lif
 # === CORS ===
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://localhost:3000",  # для React фронтенда в будущем
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -138,6 +182,12 @@ templates = Jinja2Templates(directory=str(templates_dir))
 # Share templates instance with routes module
 app.routes.templates = templates
 
+# === Healthcheck (before all routers, guaranteed available) ===
+@fastapi_app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 # === API Routes ===
 fastapi_app.include_router(api_router)
 
@@ -152,4 +202,4 @@ async def root():
 
 if __name__ == "__main__":  # for local development only, use uvicorn command for production
     import uvicorn
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
+    uvicorn.run(fastapi_app, host="127.0.0.1", port=8000)

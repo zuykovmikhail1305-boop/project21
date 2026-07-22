@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ru" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CorpAI Intelligence{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700;800&family=Murecho:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        try {
+            tailwind.config = {
+                darkMode: 'class',
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#006B5E',
+                            'on-primary': '#FFFFFF',
+                            'primary-container': '#A7F5E5',
+                            'on-primary-container': '#00201B',
+                            secondary: '#4B635C',
+                            'on-secondary': '#FFFFFF',
+                            'secondary-container': '#CDE9DF',
+                            'on-secondary-container': '#07201B',
+                            tertiary: '#426277',
+                            'on-tertiary': '#FFFFFF',
+                            'tertiary-container': '#C9E7FF',
+                            'on-tertiary-container': '#001E2E',
+                            error: '#BA1A1A',
+                            'on-error': '#FFFFFF',
+                            'error-container': '#FFDAD6',
+                            'on-error-container': '#410002',
+                            background: '#FBFDF8',
+                            'on-background': '#191C1A',
+                            surface: '#FBFDF8',
+                            'on-surface': '#191C1A',
+                            'surface-variant': '#DBE5DE',
+                            'on-surface-variant': '#404943',
+                            'outline': '#707973',
+                            'outline-variant': '#BFC9C2',
+                            'surface-container-low': '#F0F5EF',
+                        },
+                        fontFamily: {
+                            sans: ['Google Sans', 'Murecho', 'system-ui', 'sans-serif'],
+                        },
+                    },
+                },
+            }
+        } catch (_e) {}
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 107, 94, 0.1);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 30, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .emerald-glow {
+            box-shadow: 0 0 20px rgba(0, 107, 94, 0.08);
+        }
+        .message-enter {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .typing-dot {
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(0, 107, 94, 0.2);
+            border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 107, 94, 0.4);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-background text-on-background overflow-hidden">
+    <!-- Header -->
+    <header class="flex justify-between items-center px-8 h-16 w-full fixed top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 shadow-sm">
+        <div class="flex items-center gap-6">
+            <a href="/" class="flex items-center gap-2 text-xl font-bold text-primary">
+                <span class="material-symbols-outlined text-2xl">psychology</span>
+                CorpAI
+            </a>
+            <nav class="hidden md:flex items-center gap-6 ml-8" id="main-nav">
+                <a href="/chat" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg {% if active_page == 'chat' %}bg-primary-container/40 text-primary{% else %}text-on-surface-variant hover:bg-surface-variant/30{% endif %} transition-all">
+                    <span class="material-symbols-outlined text-lg">chat</span>
+                    Чат
+                </a>
+                <a href="/documents" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg {% if active_page == 'documents' %}bg-primary-container/40 text-primary{% else %}text-on-surface-variant hover:bg-surface-variant/30{% endif %} transition-all">
+                    <span class="material-symbols-outlined text-lg">description</span>
+                    Документы
+                </a>
+                <a href="/dashboard" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg {% if active_page == 'dashboard' %}bg-primary-container/40 text-primary{% else %}text-on-surface-variant hover:bg-surface-variant/30{% endif %} transition-all">
+                    <span class="material-symbols-outlined text-lg">dashboard</span>
+                    Дашборд
+                </a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-surface-variant/30 transition-all" title="Переключить тему">
+                <span class="material-symbols-outlined text-on-surface-variant">dark_mode</span>
+            </button>
+
+            <!-- User info (shown when authenticated) -->
+            <div id="user-info" class="hidden flex items-center gap-2 px-3 py-1.5 bg-primary-container/30 rounded-full">
+                <span class="material-symbols-outlined text-sm text-primary">person</span>
+                <span id="user-name" class="text-sm font-medium text-primary">Пользователь</span>
+            </div>
+
+            <!-- Login button (shown when not authenticated) -->
+            <a id="login-btn" href="/login" class="hidden px-4 py-1.5 bg-primary text-on-primary rounded-full text-sm font-medium hover:bg-primary/90 transition-all">
+                Войти
+            </a>
+
+            <!-- Logout button -->
+            <button id="logout-btn" class="hidden p-2 rounded-full hover:bg-surface-variant/30 transition-all" title="Выйти">
+                <span class="material-symbols-outlined text-on-surface-variant">logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-16 h-screen relative overflow-hidden">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // ===================== Auth State =====================
+        // Helper: get cookie value by name
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? decodeURIComponent(match[2]) : null;
+        }
+
+        // Токен для API-запросов (fetch) берём из localStorage
+        // Для HTML-навигации токен автоматически отправляется через cookie
+        const accessToken = localStorage.getItem('access_token') || getCookie('access_token');
+        const refreshToken = localStorage.getItem('refresh_token');
+        const userInfo = document.getElementById('user-info');
+        const userName = document.getElementById('user-name');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const mainNav = document.getElementById('main-nav');
+
+        async function loadUser() {
+            if (!accessToken) {
+                // Not authenticated
+                loginBtn.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                logoutBtn.classList.add('hidden');
+                return;
+            }
+
+            try {
+                // Используем cookie (автоматически отправляется браузером)
+                // или Authorization header из localStorage
+                const headers = {};
+                if (accessToken) {
+                    headers['Authorization'] = `Bearer ${accessToken}`;
+                }
+                const response = await fetch('/api/v1/auth/me', { headers });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    userName.textContent = data.username;
+                    userInfo.classList.remove('hidden');
+                    loginBtn.classList.add('hidden');
+                    logoutBtn.classList.remove('hidden');
+                } else {
+                    // Token expired — try refresh
+                    if (refreshToken) {
+                        const refreshResponse = await fetch('/api/v1/auth/refresh', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ refresh_token: refreshToken }),
+                        });
+
+                        if (refreshResponse.ok) {
+                            const data = await refreshResponse.json();
+                            localStorage.setItem('access_token', data.access_token);
+                            localStorage.setItem('refresh_token', data.refresh_token);
+                            // Retry loading user
+                            return loadUser();
+                        }
+                    }
+
+                    // Can't refresh — show login
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    loginBtn.classList.remove('hidden');
+                    userInfo.classList.add('hidden');
+                    logoutBtn.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                loginBtn.classList.remove('hidden');
+            }
+        }
+
+        // Logout
+        logoutBtn.addEventListener('click', async () => {
+            if (refreshToken) {
+                try {
+                    await fetch('/api/v1/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                        },
+                        body: JSON.stringify({ refresh_token: refreshToken }),
+                    });
+                } catch (err) {
+                    console.error('Logout error:', err);
+                }
+            }
+
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            // Удаляем cookie (устанавливаем с истёкшим сроком)
+            document.cookie = 'access_token=; max-age=0; path=/';
+            window.location.href = '/login';
+        });
+
+        // Load user on page load
+        loadUser();
+
+        // ===================== Theme Toggle =====================
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = html.classList.toggle('dark');
+            themeToggle.querySelector('.material-symbols-outlined').textContent =
+                isDark ? 'light_mode' : 'dark_mode';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // Restore theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            html.classList.add('dark');
+            themeToggle.querySelector('.material-symbols-outlined').textContent = 'light_mode';
+        }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

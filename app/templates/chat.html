@@ -1,0 +1,692 @@
+{% extends "base.html" %}
+
+{% block title %}Чат — CorpAI Intelligence{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Artifact Progress Card */
+    .artifact-progress {
+        background: linear-gradient(135deg, rgba(0, 107, 94, 0.05), rgba(0, 107, 94, 0.02));
+        border: 1px solid rgba(0, 107, 94, 0.15);
+        border-radius: 16px;
+        padding: 16px 20px;
+        margin-top: 8px;
+        animation: slideIn 0.3s ease-out;
+    }
+    .artifact-progress-bar {
+        height: 4px;
+        background: rgba(0, 107, 94, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 12px;
+    }
+    .artifact-progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #006B5E, #00A894);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+        width: 0%;
+    }
+    .artifact-progress-stage {
+        font-size: 0.8rem;
+        color: #006B5E;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .artifact-progress-stage .spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(0, 107, 94, 0.2);
+        border-top-color: #006B5E;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Chart generation status */
+    .chart-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        font-size: 0.85rem;
+        color: #404943;
+    }
+    .chart-status .chart-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        flex-shrink: 0;
+    }
+    .chart-status .chart-icon.generating {
+        background: rgba(0, 107, 94, 0.1);
+        color: #006B5E;
+    }
+    .chart-status .chart-icon.ready {
+        background: rgba(0, 107, 94, 0.15);
+        color: #006B5E;
+    }
+    .chart-status .chart-icon.error {
+        background: rgba(186, 26, 26, 0.1);
+        color: #BA1A1A;
+    }
+
+    /* Artifact ready card */
+    .artifact-ready {
+        background: linear-gradient(135deg, rgba(0, 107, 94, 0.08), rgba(0, 107, 94, 0.03));
+        border: 1px solid rgba(0, 107, 94, 0.2);
+        border-radius: 16px;
+        padding: 16px 20px;
+        margin-top: 8px;
+        animation: slideIn 0.3s ease-out;
+    }
+    .artifact-ready .file-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    .artifact-ready .file-icon.pdf {
+        background: rgba(220, 38, 38, 0.12);
+        color: #DC2626;
+    }
+    .artifact-ready .file-icon.pptx {
+        background: rgba(234, 88, 12, 0.12);
+        color: #EA580C;
+    }
+    .artifact-ready .file-icon.docx {
+        background: rgba(37, 99, 235, 0.12);
+        color: #2563EB;
+    }
+    .artifact-ready .file-icon.html {
+        background: rgba(0, 107, 94, 0.12);
+        color: #006B5E;
+    }
+    .artifact-ready .file-icon.md {
+        background: rgba(107, 114, 128, 0.12);
+        color: #6B7280;
+    }
+    .artifact-download-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #006B5E;
+        color: white;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+    }
+    .artifact-download-btn:hover {
+        background: #00554A;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 107, 94, 0.3);
+    }
+    .artifact-download-btn:active {
+        transform: translateY(0);
+    }
+    .artifact-error {
+        background: rgba(186, 26, 26, 0.06);
+        border: 1px solid rgba(186, 26, 26, 0.15);
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-top: 8px;
+        color: #BA1A1A;
+        font-size: 0.85rem;
+        animation: slideIn 0.3s ease-out;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="h-full flex flex-col">
+    <!-- Chat Messages Area -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto scrollbar-thin px-4 py-6 space-y-4">
+        <!-- Welcome message (shown when no messages) -->
+        <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-center px-6 -mt-12">
+            <div class="w-16 h-16 bg-primary-container/50 rounded-full flex items-center justify-center mb-4">
+                <span class="material-symbols-outlined text-3xl text-primary">psychology</span>
+            </div>
+            <h2 class="text-2xl font-bold text-on-surface mb-2">CorpAI Intelligence</h2>
+            <p class="text-on-surface-variant mb-8 max-w-md">
+                Ваш ассистент по корпоративным документам. Задайте вопрос или попросите проанализировать документ.
+            </p>
+            <div class="flex flex-wrap justify-center gap-3">
+                <button class="suggestion-btn flex items-center gap-2 px-4 py-2.5 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-95 rounded-full text-sm text-on-surface-variant hover:text-primary border border-outline-variant/20"
+                        data-query="Найди информацию о квартальных отчётах">
+                    <span class="material-symbols-outlined text-lg">search</span>
+                    Найти отчёты
+                </button>
+                <button class="suggestion-btn flex items-center gap-2 px-4 py-2.5 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-95 rounded-full text-sm text-on-surface-variant hover:text-primary border border-outline-variant/20"
+                        data-query="Составь саммари последнего документа">
+                    <span class="material-symbols-outlined text-lg">summarize</span>
+                    Саммари
+                </button>
+                <button class="suggestion-btn flex items-center gap-2 px-4 py-2.5 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-95 rounded-full text-sm text-on-surface-variant hover:text-primary border border-outline-variant/20"
+                        data-query="Проанализируй документы">
+                    <span class="material-symbols-outlined text-lg">analytics</span>
+                    Аналитика
+                </button>
+                <button class="suggestion-btn flex items-center gap-2 px-4 py-2.5 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-95 rounded-full text-sm text-on-surface-variant hover:text-primary border border-outline-variant/20"
+                        data-query="Создай презентацию">
+                    <span class="material-symbols-outlined text-lg">slideshow</span>
+                    Презентация
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="border-t border-outline-variant/10 bg-surface/80 backdrop-blur-xl px-4 py-4">
+        <div class="max-w-4xl mx-auto">
+            <form id="chat-form" class="flex items-end gap-3">
+                <div class="flex-1 relative">
+                    <textarea id="chat-input"
+                              class="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface px-5 py-3.5 pr-12 text-sm
+                                     focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30
+                                     placeholder:text-on-surface-variant/50 scrollbar-thin"
+                              rows="1"
+                              placeholder="Задайте вопрос о документах..."
+                              style="min-height: 48px; max-height: 200px;"
+                    ></textarea>
+                    <button type="submit"
+                            id="send-button"
+                            class="absolute right-2 bottom-2 p-2 rounded-xl bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-lg">arrow_upward</span>
+                    </button>
+                </div>
+            </form>
+            <p class="text-xs text-on-surface-variant/50 mt-2 text-center">
+                CorpAI может допускать ошибки. Проверяйте важную информацию.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let currentSessionId = null;
+    let isStreaming = false;
+    let eventSource = null;
+
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-button');
+    const welcomeMessage = document.getElementById('welcome-message');
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+    });
+
+    // Submit on Enter (Shift+Enter for newline)
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Suggestion buttons
+    document.querySelectorAll('.suggestion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            chatInput.value = btn.dataset.query;
+            chatForm.dispatchEvent(new Event('submit'));
+        });
+    });
+
+    // Form submit
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message || isStreaming) return;
+
+        // Hide welcome
+        welcomeMessage?.classList.add('hidden');
+
+        // Add user message
+        addMessage('user', message);
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+
+        // Show typing indicator
+        const typingId = showTyping();
+
+        // Start streaming
+        isStreaming = true;
+        sendButton.disabled = true;
+
+        try {
+            const response = await fetch('/api/v1/chat/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: currentSessionId,
+                    message: message,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            // Read SSE stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let assistantMessageEl = null;
+            let assistantContent = '';
+            let currentEventType = null;
+            let artifactProgressEl = null;
+            let artifactChartsContainer = null;
+            let totalCharts = 0;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    // Track event type (SSE format: event: xxx \\n data: {...})
+                    if (line.startsWith('event: ')) {
+                        currentEventType = line.slice(7).trim();
+                        continue;
+                    }
+
+                    if (!line.startsWith('data: ')) continue;
+
+                    const data = JSON.parse(line.slice(6));
+
+                    // === Route event ===
+                    if (data.route !== undefined) {
+                        console.log('Route:', data.route, 'Error:', data.error);
+                        continue;
+                    }
+
+                    // === Session ID ===
+                    if (data.session_id !== undefined) {
+                        currentSessionId = data.session_id;
+                        continue;
+                    }
+
+                    // === Artifact Events ===
+                    if (currentEventType === 'artifact_planning') {
+                        // Remove typing indicator on first artifact event
+                        if (!artifactProgressEl) {
+                            removeTyping(typingId);
+                            // Create assistant message container for artifact
+                            assistantMessageEl = addMessage('assistant', '', true);
+                        }
+
+                        if (data.phase === 'planning') {
+                            // Initial planning event — create progress card
+                            artifactProgressEl = document.createElement('div');
+                            artifactProgressEl.className = 'artifact-progress';
+                            artifactProgressEl.innerHTML = `
+                                <div class="artifact-progress-stage">
+                                    <span class="spinner"></span>
+                                    <span>Планирование структуры артефакта...</span>
+                                </div>
+                                <div class="artifact-progress-bar">
+                                    <div class="artifact-progress-bar-fill" style="width: 10%"></div>
+                                </div>
+                            `;
+                            assistantMessageEl.querySelector('.message-bubble').appendChild(artifactProgressEl);
+                            scrollToBottom();
+                        } else if (data.type) {
+                            // Planning result with structure
+                            const typeLabels = {pdf: 'PDF', pptx: 'PPTX', docx: 'DOCX', html: 'HTML', md: 'Markdown'};
+                            const typeLabel = typeLabels[data.type] || data.type.toUpperCase();
+                            const chartEngine = data.chart_engine === 'plotly' ? 'Plotly (интерактивные)' : 'Matplotlib/Seaborn';
+                            const sections = data.sections || [];
+                            const charts = data.charts || [];
+                            totalCharts = charts.length;
+
+                            let sectionsHtml = sections.map(s =>
+                                `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:0.8rem;color:#404943">
+                                    <span style="color:#006B5E">▸</span>
+                                    ${s.title}${s.requires_chart ? ' <span style="font-size:0.7rem;color:#006B5E">[график]</span>' : ''}
+                                </div>`
+                            ).join('');
+
+                            let chartsHtml = '';
+                            if (charts.length > 0) {
+                                chartsHtml = `
+                                    <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,107,94,0.1)">
+                                        <div style="font-size:0.75rem;color:#006B5E;font-weight:500;margin-bottom:4px">
+                                            📊 Графики (${chartEngine}): ${charts.length}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            artifactProgressEl.innerHTML = `
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                                    <div style="font-size:1.2rem">📄</div>
+                                    <div>
+                                        <div style="font-weight:600;font-size:0.9rem;color:#191C1A">${data.title}</div>
+                                        <div style="font-size:0.75rem;color:#006B5E;font-weight:500">${typeLabel}</div>
+                                    </div>
+                                </div>
+                                ${sectionsHtml}
+                                ${chartsHtml}
+                                <div class="artifact-progress-bar" style="margin-top:10px">
+                                    <div class="artifact-progress-bar-fill" style="width: 15%"></div>
+                                </div>
+                                <div class="artifact-progress-stage" style="margin-top:8px">
+                                    <span class="spinner"></span>
+                                    <span>Генерация артефакта...</span>
+                                </div>
+                            `;
+                            scrollToBottom();
+                        }
+                        continue;
+                    }
+
+                    if (currentEventType === 'chart_generating') {
+                        if (!artifactChartsContainer) {
+                            artifactChartsContainer = document.createElement('div');
+                            artifactChartsContainer.style.marginTop = '8px';
+                            artifactProgressEl.appendChild(artifactChartsContainer);
+                        }
+
+                        const chartIdx = data.chart_index;
+                        const chartTitle = data.chart_title;
+                        const engine = data.engine === 'plotly' ? 'Plotly' : 'Matplotlib';
+
+                        const chartRow = document.createElement('div');
+                        chartRow.className = 'chart-status';
+                        chartRow.id = `chart-${chartIdx}`;
+                        chartRow.innerHTML = `
+                            <div class="chart-icon generating">
+                                <span class="material-symbols-outlined" style="font-size:14px">bar_chart</span>
+                            </div>
+                            <span style="flex:1">График ${chartIdx + 1}: ${chartTitle}</span>
+                            <span style="font-size:0.75rem;color:#006B5E">${engine}...</span>
+                        `;
+                        artifactChartsContainer.appendChild(chartRow);
+
+                        // Update progress bar
+                        const fill = artifactProgressEl.querySelector('.artifact-progress-bar-fill');
+                        if (fill) {
+                            const progress = 15 + (chartIdx / totalCharts) * 45;
+                            fill.style.width = Math.min(progress, 60) + '%';
+                        }
+                        scrollToBottom();
+                        continue;
+                    }
+
+                    if (currentEventType === 'chart_ready') {
+                        const chartIdx = data.chart_index;
+                        const chartRow = document.getElementById(`chart-${chartIdx}`);
+                        if (chartRow) {
+                            chartRow.innerHTML = `
+                                <div class="chart-icon ready">
+                                    <span class="material-symbols-outlined" style="font-size:14px">check</span>
+                                </div>
+                                <span style="flex:1">График ${chartIdx + 1}</span>
+                                <span style="font-size:0.75rem;color:#006B5E">✓ готов</span>
+                            `;
+                        }
+
+                        // Update progress bar
+                        const fill = artifactProgressEl.querySelector('.artifact-progress-bar-fill');
+                        if (fill) {
+                            const progress = 15 + ((chartIdx + 1) / totalCharts) * 45;
+                            fill.style.width = Math.min(progress, 60) + '%';
+                        }
+                        continue;
+                    }
+
+                    if (currentEventType === 'artifact_progress') {
+                        const percent = data.percent || 0;
+                        const stage = data.stage || '';
+
+                        const stageLabels = {
+                            generating_content: 'Генерация содержимого...',
+                            rendering: 'Рендеринг артефакта...',
+                            saving: 'Сохранение...',
+                        };
+                        const stageLabel = stageLabels[stage] || 'Обработка...';
+
+                        const fill = artifactProgressEl.querySelector('.artifact-progress-bar-fill');
+                        if (fill) {
+                            fill.style.width = Math.min(percent, 95) + '%';
+                        }
+
+                        const stageEl = artifactProgressEl.querySelector('.artifact-progress-stage');
+                        if (stageEl) {
+                            stageEl.innerHTML = `
+                                <span class="spinner"></span>
+                                <span>${stageLabel}</span>
+                            `;
+                        }
+                        scrollToBottom();
+                        continue;
+                    }
+
+                    if (currentEventType === 'artifact_ready') {
+                        // Remove spinner, show download button
+                        const artifactType = data.type || 'pdf';
+                        const artifactId = data.id;
+                        const filename = data.filename || `artifact.${artifactType}`;
+                        const fileSize = data.size;
+
+                        const typeLabels = {pdf: 'PDF', pptx: 'PPTX', docx: 'DOCX', html: 'HTML', md: 'Markdown'};
+                        const typeLabel = typeLabels[artifactType] || artifactType.toUpperCase();
+                        const downloadUrl = `/api/v1/artifacts/${artifactId}/download`;
+
+                        // Format file size
+                        let sizeStr = '';
+                        if (fileSize) {
+                            if (fileSize < 1024) sizeStr = fileSize + ' B';
+                            else if (fileSize < 1024 * 1024) sizeStr = (fileSize / 1024).toFixed(1) + ' KB';
+                            else sizeStr = (fileSize / (1024 * 1024)).toFixed(1) + ' MB';
+                        }
+
+                        // Replace progress card with ready card
+                        const readyCard = document.createElement('div');
+                        readyCard.className = 'artifact-ready';
+                        readyCard.innerHTML = `
+                            <div style="display:flex;align-items:center;gap:14px">
+                                <div class="file-icon ${artifactType}">${typeLabel}</div>
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-weight:600;font-size:0.9rem;color:#191C1A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                        ${filename}
+                                    </div>
+                                    <div style="font-size:0.75rem;color:#707973;margin-top:2px">
+                                        ${typeLabel}${sizeStr ? ' · ' + sizeStr : ''}
+                                    </div>
+                                </div>
+                                <a href="${downloadUrl}" class="artifact-download-btn" download>
+                                    <span class="material-symbols-outlined" style="font-size:18px">download</span>
+                                    Скачать
+                                </a>
+                            </div>
+                        `;
+
+                        if (artifactProgressEl && artifactProgressEl.parentNode) {
+                            artifactProgressEl.replaceWith(readyCard);
+                        } else if (assistantMessageEl) {
+                            assistantMessageEl.querySelector('.message-bubble').appendChild(readyCard);
+                        }
+                        artifactProgressEl = null;
+                        scrollToBottom();
+                        continue;
+                    }
+
+                    if (currentEventType === 'artifact_error') {
+                        const errorMsg = data.error || 'Неизвестная ошибка';
+
+                        // Replace progress card with error card
+                        const errorCard = document.createElement('div');
+                        errorCard.className = 'artifact-error';
+                        errorCard.innerHTML = `
+                            <div style="display:flex;align-items:flex-start;gap:8px">
+                                <span style="font-size:1.1rem">❌</span>
+                                <div>
+                                    <div style="font-weight:600;font-size:0.85rem;margin-bottom:4px">Ошибка генерации артефакта</div>
+                                    <div style="font-size:0.8rem;opacity:0.8">${errorMsg}</div>
+                                </div>
+                            </div>
+                        `;
+
+                        if (artifactProgressEl && artifactProgressEl.parentNode) {
+                            artifactProgressEl.replaceWith(errorCard);
+                        } else if (assistantMessageEl) {
+                            assistantMessageEl.querySelector('.message-bubble').appendChild(errorCard);
+                        }
+                        artifactProgressEl = null;
+                        scrollToBottom();
+                        continue;
+                    }
+
+                    // === Token event (text streaming) ===
+                    if (data.token !== undefined) {
+                        if (!assistantMessageEl) {
+                            removeTyping(typingId);
+                            assistantMessageEl = addMessage('assistant', '', true);
+                        }
+                        assistantContent += data.token;
+                        assistantMessageEl.querySelector('.message-content').textContent = assistantContent;
+                        scrollToBottom();
+                        continue;
+                    }
+
+                    // === Citations ===
+                    if (data.citations !== undefined) {
+                        if (assistantMessageEl) {
+                            const citationsDiv = document.createElement('div');
+                            citationsDiv.className = 'mt-3 p-3 bg-surface-variant/30 rounded-lg';
+                            citationsDiv.innerHTML = data.html || '';
+                            assistantMessageEl.querySelector('.message-bubble').appendChild(citationsDiv);
+                        }
+                        continue;
+                    }
+
+                    // === Error ===
+                    if (data.error !== undefined) {
+                        console.error('Stream error:', data.error);
+                        if (!assistantMessageEl) {
+                            removeTyping(typingId);
+                            assistantMessageEl = addMessage('assistant', '', true);
+                        }
+                        assistantMessageEl.querySelector('.message-content').textContent =
+                            'Произошла ошибка при обработке запроса. Пожалуйста, попробуйте ещё раз.';
+                        continue;
+                    }
+                }
+            }
+
+            // Ensure typing indicator is removed
+            removeTyping(typingId);
+
+        } catch (error) {
+            console.error('Stream error:', error);
+            removeTyping(typingId);
+            addMessage('assistant', 'Произошла ошибка при обработке запроса. Пожалуйста, попробуйте ещё раз.');
+        } finally {
+            isStreaming = false;
+            sendButton.disabled = false;
+            scrollToBottom();
+        }
+    });
+
+    function addMessage(role, content, isStreaming = false) {
+        const isUser = role === 'user';
+        const div = document.createElement('div');
+        div.className = `flex ${isUser ? 'justify-end' : 'justify-start'} message-enter`;
+        div.innerHTML = `
+            <div class="message-bubble max-w-[80%] lg:max-w-[65%]">
+                ${!isUser ? `
+                <div class="flex items-center gap-2 mb-1.5">
+                    <div class="w-7 h-7 rounded-full bg-primary-container/50 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm text-primary">psychology</span>
+                    </div>
+                    <span class="text-xs font-medium text-on-surface-variant">CorpAI</span>
+                </div>
+                ` : `
+                <div class="flex items-center gap-2 mb-1.5 justify-end">
+                    <span class="text-xs font-medium text-on-surface-variant">Вы</span>
+                    <div class="w-7 h-7 rounded-full bg-secondary-container/50 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm text-secondary">person</span>
+                    </div>
+                </div>
+                `}
+                <div class="message-content px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    isUser
+                        ? 'bg-primary text-on-primary rounded-br-md'
+                        : 'bg-surface-variant/50 text-on-surface rounded-bl-md'
+                }">
+                    ${isStreaming ? '' : content}
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+        return div;
+    }
+
+    function showTyping() {
+        const id = 'typing-' + Date.now();
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = 'flex justify-start message-enter';
+        div.innerHTML = `
+            <div class="max-w-[80%] lg:max-w-[65%]">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <div class="w-7 h-7 rounded-full bg-primary-container/50 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm text-primary">psychology</span>
+                    </div>
+                    <span class="text-xs font-medium text-on-surface-variant">CorpAI</span>
+                </div>
+                <div class="px-4 py-3 rounded-2xl bg-surface-variant/50 rounded-bl-md">
+                    <div class="flex items-center gap-1.5">
+                        <span class="typing-dot w-2 h-2 bg-primary rounded-full inline-block"></span>
+                        <span class="typing-dot w-2 h-2 bg-primary rounded-full inline-block"></span>
+                        <span class="typing-dot w-2 h-2 bg-primary rounded-full inline-block"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+        return id;
+    }
+
+    function removeTyping(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+
+    function scrollToBottom() {
+        setTimeout(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 50);
+    }
+</script>
+{% endblock %}

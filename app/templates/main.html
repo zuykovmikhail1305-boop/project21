@@ -1,0 +1,225 @@
+<!DOCTYPE html><html lang="ru" class="light" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700;800&amp;family=Murecho:wght@400;700&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#002117",
+                    "secondary-fixed-dim": "#95da07",
+                    "on-secondary-fixed": "#121f00",
+                    "primary": "#006b1d",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-container": "#f5fff8",
+                    "surface-container-high": "#e8e8e8",
+                    "on-surface-variant": "#3e4a3c",
+                    "inverse-primary": "#68df6e",
+                    "tertiary-fixed": "#61fccb",
+                    "outline-variant": "#bdcab8",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#aff834",
+                    "tertiary-fixed-dim": "#3cdfb0",
+                    "outline": "#6e7b6a",
+                    "surface-dim": "#dadada",
+                    "surface-container": "#eeeeee",
+                    "error": "#ba1a1a",
+                    "secondary-container": "#aff834",
+                    "surface-bright": "#f9f9f9",
+                    "surface-container-highest": "#e2e2e2",
+                    "on-surface": "#1a1c1c",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#2f3131",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#006950",
+                    "primary-fixed": "#84fc87",
+                    "surface-container-low": "#f3f3f4",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#008728",
+                    "on-tertiary-fixed-variant": "#00513d",
+                    "on-primary-container": "#f7fff1",
+                    "primary-fixed-dim": "#68df6e",
+                    "secondary": "#456800",
+                    "tertiary-container": "#008566",
+                    "on-background": "#1a1c1c",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#005315",
+                    "on-error": "#ffffff",
+                    "surface-tint": "#006e1e",
+                    "on-secondary-container": "#496f00",
+                    "surface": "#f9f9f9",
+                    "background": "#f9f9f9",
+                    "on-secondary-fixed-variant": "#334f00",
+                    "inverse-on-surface": "#f0f1f1",
+                    "surface-variant": "#e2e2e2",
+                    "on-primary-fixed": "#002204"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Google Sans"],
+                    "display": ["Google Sans"],
+                    "body": ["Google Sans"],
+                    "label": ["Murecho"]
+            }
+          },
+        },
+      }
+    }catch(_e){}</script><meta charset="utf-8"></head><body class="bg-background text-on-background overflow-hidden">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-8 h-16 w-full fixed top-0 z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 shadow-sm">
+<div class="flex items-center gap-6">
+<span class="text-headline-md font-black tracking-tight text-primary dark:text-primary-fixed">CorpAI Intelligence</span>
+<div class="hidden md:flex gap-8 ml-12">
+<nav class="flex items-center gap-6 h-16">
+<a href="#" class="text-primary font-bold border-b-2 border-primary h-full flex items-center px-2 hover:text-primary transition-colors duration-200 active:scale-95 transition-transform">Explore</a>
+<a href="#" class="text-on-surface-variant font-medium h-full flex items-center px-2 hover:text-primary transition-colors duration-200 active:scale-95 transition-transform">Solutions</a>
+<a href="#" class="text-on-surface-variant font-medium h-full flex items-center px-2 hover:text-primary transition-colors duration-200 active:scale-95 transition-transform">Resources</a>
+</nav>
+</div>
+</div>
+<div class="flex items-center gap-4">
+
+<button class="p-2 rounded-full hover:bg-surface-variant/30 text-on-surface-variant transition-colors active:scale-95 transition-transform">
+
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 ml-2">
+
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-4rem)] flex flex-col p-4 z-40 bg-surface-container-low/50 dark:bg-surface-container-low/50 backdrop-blur-lg border-r border-outline-variant/10 w-64 hidden md:flex">
+<div class="flex flex-col gap-1 mb-8">
+<button class="w-full py-3 px-4 flex items-center gap-3 bg-primary text-on-primary rounded-full font-bold active:translate-x-1 transition-transform mb-6">
+<span class="material-symbols-outlined">add</span>
+<span class="">New Analysis</span>
+</button>
+<nav class="space-y-1">
+<div class="font-label uppercase tracking-widest text-[10px] text-on-surface-variant/60 px-4 py-2">Workspace</div>
+<a class="flex items-center gap-3 py-2.5 px-4 bg-primary-container/20 text-primary font-bold rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">chat</span>
+<span class="">Chats</span>
+</a>
+<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">book_2</span>
+<span class="">Library</span>
+</a>
+<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">folder_shared</span>
+<span class="">Projects</span>
+</a>
+<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">apps</span>
+<span class="">Apps</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto space-y-1 border-t border-outline-variant/10 pt-4">
+<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="">Support</span>
+</a>
+<a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="">Уведомления</span>
+</a><a class="flex items-center gap-3 py-2.5 px-4 text-on-surface-variant rounded-lg hover:bg-surface-variant/30 transition-all duration-200 active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-0 md:ml-64 pt-16 h-screen relative overflow-hidden">
+<!-- Background Animation Shader -->
+
+<!-- Subtle Gradient Overlays -->
+<div class="absolute inset-0 bg-gradient-to-b from-transparent via-surface/30 to-surface pointer-events-none"></div>
+<div class="relative z-10 w-full h-full flex flex-col items-center justify-center px-6 -mt-12">
+<!-- Centerpiece Hero Image from Prompt -->
+<div class="w-full max-w-2xl mb-12 transform hover:scale-[1.02] transition-transform duration-700">
+
+</div>
+<!-- Main Heading -->
+<h1 class="text-[44px] md:text-6xl font-extrabold tracking-tight text-on-surface mb-12 text-center leading-tight">
+                Что сегодня в <span class="text-primary">повестке дня</span>?
+            </h1>
+<!-- Search Command Interface -->
+<div class="w-full max-w-3xl space-y-8">
+<div class="glass-panel emerald-glow rounded-full px-6 py-4 flex items-center gap-4 transition-all focus-within:ring-2 focus-within:ring-primary/20">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-xl font-medium placeholder:text-on-surface-variant/50 text-on-surface" placeholder="Спросите CorpAI..." type="text">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 px-2">
+<div class="w-1 h-4 bg-primary/20 rounded-full"></div>
+<div class="w-1 h-7 bg-primary/40 rounded-full pulse-animation"></div>
+<div class="w-1 h-5 bg-primary/30 rounded-full"></div>
+</div>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<button class="p-3 bg-primary text-on-primary rounded-full hover:bg-primary-container transition-all active:scale-90">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="flex flex-wrap justify-center gap-4">
+<button class="flex items-center gap-2 px-5 py-3 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all group active:scale-95 rounded-full">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">image</span>
+<span class="text-sm font-medium">Создать изображение</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-3 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all group active:scale-95 rounded-full">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">edit_note</span>
+<span class="text-sm font-medium">Напиши или отредактируй</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-3 glass-panel hover:bg-primary/10 hover:border-primary/30 transition-all group active:scale-95 rounded-full">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">language</span>
+<span class="text-sm font-medium">Искать в интернете</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Decorative Glow Line -->
+<div class="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+</main>
+<script>
+        // Micro-interactions for the search bar
+        const searchInput = document.querySelector('input');
+        const searchContainer = searchInput.parentElement;
+
+        searchInput.addEventListener('focus', () => {
+            searchContainer.classList.add('emerald-glow');
+            searchContainer.style.borderColor = 'rgba(0, 107, 29, 0.4)';
+        });
+
+        searchInput.addEventListener('blur', () => {
+            searchContainer.style.borderColor = 'rgba(0, 107, 29, 0.1)';
+        });
+
+        // Floating particle effect for atmosphere (vanilla js)
+        const canvasContainer = document.querySelector('main');
+        for (let i = 0; i < 5; i++) {
+            const glow = document.createElement('div');
+            glow.className = 'absolute rounded-full pointer-events-none opacity-20 filter blur-[80px]';
+            glow.style.width = Math.random() * 300 + 200 + 'px';
+            glow.style.height = glow.style.width;
+            glow.style.background = i % 2 === 0 ? '#006b1d' : '#42E3B4';
+            glow.style.left = Math.random() * 100 + '%';
+            glow.style.top = Math.random() * 100 + '%';
+            glow.style.transition = 'all 10s ease-in-out';
+            canvasContainer.appendChild(glow);
+            
+            setInterval(() => {
+                glow.style.left = Math.random() * 100 + '%';
+                glow.style.top = Math.random() * 100 + '%';
+            }, 10000);
+        }
+    </script>
+
+</body></html>

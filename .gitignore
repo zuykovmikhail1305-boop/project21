@@ -1,3 +1,7 @@
 .gigacode_vsc
-backend-tasks.md
-project-arch.md
+.env
+.venv
+tests
+requirements.txt
+# backend-tasks.md
+# project-arch.md

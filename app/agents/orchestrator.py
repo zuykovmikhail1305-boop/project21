@@ -25,21 +25,26 @@ class AgentState(TypedDict):
     search_result: Optional[dict]
     summary_result: Optional[dict]
     analytics_result: Optional[dict]
-    artifact_result: Optional[dict]  # результат генерации артефакта
+    artifact_result: Optional[dict]  # результат генерации артефакта (v2)
     final_answer: Optional[str]
     citations: list[dict]
     error: Optional[str]
+    # Поля для v2 ArtifactGeneratorAgent
+    template_name: str  # шаблон документа (определяется из запроса)
+    output_format: str  # формат вывода: pdf, pptx, html, md
 
 
 class AgentOrchestrator:
     """Оркестратор мультиагентной системы на LangGraph."""
 
-    def __init__(self):
+    def __init__(self, db_session=None):
         self.router = RouterAgent()
         self.search_rag = SearchRAGAgent()
         self.summarizer = SummarizerAgent()
         self.analytics = AnalyticsAgent()
-        self.artifact_gen = ArtifactGeneratorAgent()
+        self.artifact_gen = ArtifactGeneratorAgent(
+            db_session=db_session,
+        )
         self.graph = None
 
         # Строим граф, если доступен LangGraph
@@ -211,13 +216,56 @@ class AgentOrchestrator:
             state["error"] = f"Analytics error: {e}"
         return state
 
+    def _detect_template(self, query: str) -> str:
+        """Определяет шаблон артефакта по запросу пользователя."""
+        query_lower = query.lower()
+        if any(w in query_lower for w in ["квартальн", "quarterly", "квартал"]):
+            return "quarterly_report"
+        if any(w in query_lower for w in ["executive", "summary", "резюме", "кратк"]):
+            return "executive_summary"
+        if any(w in query_lower for w in ["инвест", "investor", "питч", "pitch", "deck"]):
+            return "investor_deck"
+        if any(w in query_lower for w in ["техническ", "technical", "proposal", "предложен"]):
+            return "technical_proposal"
+        if any(w in query_lower for w in ["architecture", "review", "архитектур", "ревью"]):
+            return "architecture_review"
+        if any(w in query_lower for w in ["инцидент", "incident", "авари"]):
+            return "incident_report"
+        return "corporate_report"  # default
+
+    def _detect_format(self, query: str) -> str:
+        """Определяет формат вывода по запросу пользователя."""
+        query_lower = query.lower()
+        if any(w in query_lower for w in ["pptx", "powerpoint", "презентац", "слайд"]):
+            return "pptx"
+        if any(w in query_lower for w in ["html", "web", "веб"]):
+            return "html"
+        if any(w in query_lower for w in ["md", "markdown", "разметк"]):
+            return "md"
+        return "pdf"  # default
+
     async def _generate_artifact(self, state: AgentState) -> AgentState:
-        """Узел: Artifact Generator Agent.
+        """Узел: Artifact Generator Agent (v2).
 
         Генерирует артефакт (PDF, презентацию, отчёт) на основе
         запроса пользователя и контекста из документов.
+        Автоматически определяет шаблон и формат вывода по запросу.
         """
+        import logging
+        logger = logging.getLogger(__name__)
         try:
+            # Определяем шаблон и формат по запросу
+            template_name = self._detect_template(state["query"])
+            output_format = self._detect_format(state["query"])
+            logger.info(
+                "Artifact generation: template=%s format=%s query=%s",
+                template_name, output_format, state["query"][:100],
+            )
+
+            # Сохраняем в state для использования в _finalize
+            state["template_name"] = template_name
+            state["output_format"] = output_format
+
             # Получаем контекст из search_result, если он есть
             context = ""
             search_result = state.get("search_result")
@@ -235,10 +283,14 @@ class AgentOrchestrator:
                 context=context,
                 user_id=state["user_id"],
                 session_id=0,  # будет передан из API
+                template_name=template_name,
+                theme_name="corporate",
+                output_format=output_format,
             )
             state["artifact_result"] = result
         except Exception as e:
             state["error"] = f"Artifact generation error: {e}"
+            logger.exception("Artifact generation failed")
         return state
 
     async def _finalize(self, state: AgentState) -> AgentState:
@@ -277,19 +329,47 @@ class AgentOrchestrator:
                 f"**Связанные темы:** {', '.join(analytics.get('related_topics', []))}"  # type: ignore[union-attr]
             )
         elif route == "generate" and state.get("artifact_result"):
-            artifact = state["artifact_result"]
-            if artifact.get("status") == "ready":  # type: ignore[union-attr]
+            artifact = state["artifact_result"]  # type: ignore[union-attr]
+            status = artifact.get("status", "")  # type: ignore[union-attr]
+            if status == "ready":
+                title = artifact.get("title", "Артефакт")  # type: ignore[union-attr]
+                artifact_type = artifact.get("artifact_type", "").upper()  # type: ignore[union-attr]
+                project_id = artifact.get("project_id")  # type: ignore[union-attr]
+                version_id = artifact.get("version_id")  # type: ignore[union-attr]
+                artifact_id = artifact.get("artifact_id")  # type: ignore[union-attr]
+
+                # Формируем ссылку на скачивание
+                download_url = f"/api/v1/artifacts/download/{project_id}/{version_id}" if project_id and version_id else None
+
                 state["final_answer"] = (
                     f"✅ **Артефакт сгенерирован!**\n\n"
-                    f"**{artifact.get('title', 'Артефакт')}** "  # type: ignore[union-attr]
-                    f"({artifact.get('artifact_type', '').upper()})\n\n"  # type: ignore[union-attr]
-                    f"Файл готов к скачиванию."
+                    f"**{title}** ({artifact_type})\n\n"
                 )
-            elif artifact.get("status") == "error":  # type: ignore[union-attr]
+                if download_url:
+                    state["final_answer"] += (
+                        f"📥 **Скачать:** [ссылка]({download_url})\n"
+                    )
+                if project_id:
+                    state["final_answer"] += f"🆔 Проект: `{project_id}`\n"
+                if version_id:
+                    state["final_answer"] += f"🆔 Версия: `{version_id}`\n"
+                if artifact_id:
+                    state["final_answer"] += f"🆔 Артефакт: `{artifact_id}`\n"
+
+                logger.info(
+                    "Artifact ready: project=%s version=%s artifact=%s type=%s",
+                    project_id, version_id, artifact_id, artifact_type,
+                )
+            elif status == "error":
+                error_message = (
+                    artifact.get("error_message")  # type: ignore[union-attr]
+                    or artifact.get("error")  # type: ignore[union-attr]
+                    or "Неизвестная ошибка"
+                )
                 state["final_answer"] = (
-                    f"❌ **Ошибка генерации артефакта:**\n"
-                    f"{artifact.get('error', 'Неизвестная ошибка')}"  # type: ignore[union-attr]
+                    f"❌ **Ошибка генерации артефакта:**\n{error_message}"
                 )
+                logger.error("Artifact generation error: %s", error_message)
             else:
                 state["final_answer"] = "🔄 Генерация артефакта в процессе..."
         else:
@@ -344,6 +424,8 @@ class AgentOrchestrator:
             "final_answer": None,
             "citations": [],
             "error": None,
+            "template_name": "corporate_report",  # default, будет переопределён в _generate_artifact
+            "output_format": "pdf",  # default, будет переопределён в _generate_artifact
         }
 
         if self.graph is None:

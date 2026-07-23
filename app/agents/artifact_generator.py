@@ -1,17 +1,24 @@
-"""Artifact Generator Agent: генерация артефактов (PDF, презентации, отчёты).
+"""Artifact Generator Agent v2: генерация артефактов (PDF, презентации, отчёты).
 
-Агент работает в 5 фаз:
-1. Планирование — LLM определяет структуру артефакта и выбирает движок графиков
-2. Генерация графиков — LLM пишет код Matplotlib/Plotly → sandbox выполняет
-3. Генерация Marp Markdown — LLM создаёт Markdown со вставками графиков
-4. Рендеринг — Marp CLI конвертирует Markdown в целевой формат
-5. Сохранение — файл сохраняется в StorageProvider
+Архитектура v2 (один LLM-вызов):
+1. Planning — LLM → ArtifactPlan (смысловая структура, без кода/Markdown)
+2. Document Building — DocumentBuilder.build(plan, context, theme) → DocumentModel
+3. Document Validation — DocumentValidator.validate(document) → auto-fix если можно
+4. Rendering — RendererFactory.render(document, format) → RenderResult
+5. Render Validation — RenderValidator.validate(render_result) → логирование
+6. Save — v2 таблицы (artifact_projects, artifact_versions, artifact_assets) + StorageProvider
 """
+
+from __future__ import annotations
 
 import json
 import logging
 import os
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Any, Optional
+
+import pandas as pd
+from sqlalchemy.orm import Session
 
 try:
     from langchain_gigachat import GigaChat as GigaChatLangChain
@@ -23,82 +30,115 @@ try:
 except Exception:  # pragma: no cover - optional dependency guard
     ChatOpenAI = None
 
-from pydantic import BaseModel, Field
-
 from app.core import config
-from app.services.artifact.base import (
+from app.models.artifact_v2 import ArtifactProject, ArtifactVersion, ArtifactAsset
+from app.services.artifact.models import (
     ArtifactPlan,
-    ArtifactContent,
-    ChartPlan,
-    SandboxResult,
+    ArtifactContext,
+    DocumentModel,
+    Theme,
+    ValidationResult,
     RenderResult,
+    ArtifactStatus,
+    AssetType,
 )
-from app.services.artifact.chart_executor import SubprocessSandbox
-from app.services.artifact.marp_renderer import MarpRenderer
+from app.services.artifact.document_builder import DocumentBuilder
+from app.services.artifact.marp_generator import MarpGenerator
+from app.services.artifact.renderer_factory import RendererFactory
+from app.services.artifact.asset_resolver import AssetResolver
+from app.services.artifact.asset_manager import AssetManager
+from app.services.artifact.validator import DocumentValidator, ArtifactAutoFix, RenderValidator
+from app.services.artifact.template_manager import TemplateManager
+from app.services.artifact.theme_manager import ThemeManager
+from app.services.artifact.chart_builder import ChartBuilder
+from app.services.artifact.diagram_builder import DiagramBuilder
+from app.services.artifact.formula_builder import FormulaBuilder
 from app.services.storage import MockStorageProvider, StorageProvider
 
 logger = logging.getLogger(__name__)
 
 
-# === Pydantic модели для структурированного вывода LLM ===
+# === Промпт для Phase 1 (единственный LLM-вызов) ===
 
+ARTIFACT_PLANNING_PROMPT = """Ты — архитектор корпоративных документов. Твоя задача — спроектировать структуру документа на основе запроса пользователя и контекста.
 
-class LLMArtifactPlan(BaseModel):
-    """Структурированный план артефакта от LLM."""
-    title: str = Field(description="Название артефакта")
-    artifact_type: str = Field(
-        description="Тип артефакта: pdf, pptx, docx, md, html",
-        pattern=r"^(pdf|pptx|docx|md|html)$",
-    )
-    chart_engine: str = Field(
-        description="Движок графиков: matplotlib (по умолчанию) или plotly (если явно запрошена интерактивность)",
-        pattern=r"^(matplotlib|plotly)$",
-    )
-    sections: list[dict] = Field(
-        description="Список разделов артефакта. Каждый: {title, description, requires_chart или null}"
-    )
-    charts: list[dict] = Field(
-        description="Список графиков. Каждый: {chart_type, title, data_source}"
-    )
-    reasoning: str = Field(description="Обоснование выбора структуры и движка графиков")
+## Правила
+1. Ты НЕ пишешь код, НЕ генерируешь Markdown, НЕ указываешь типы графиков.
+2. Ты определяешь ТОЛЬКО смысловую структуру: заголовки секций, типы блоков, описания.
+3. Каждая секция содержит список блоков. Доступные типы блоков:
+   - heading — заголовок (level: 1-6, text: текст)
+   - paragraph — абзац (text: текст)
+   - table — таблица (headers: список колонок, rows: список строк, data_source: описание данных)
+   - chart — график (description: что показать, data_source: откуда данные, columns: какие колонки)
+   - diagram — диаграмма (engine: "mermaid", code: код диаграммы)
+   - formula — формула (latex: LaTeX-код)
+   - code — код (language: язык, code: код)
+   - quote — цитата (text: текст, source: источник)
+   - image — изображение (src: путь, alt: описание)
+   - bullet_list — маркированный список (items: список строк)
+   - columns — колонки (columns: [{{blocks: [...]}}])
+   - callout — выделенный блок (style: "info"|"warning"|"error"|"success", text: текст)
 
+4. Для chart-блоков укажи:
+   - description: что именно показать на графике (например, "Динамика выручки по месяцам")
+   - data_source: откуда брать данные (например, "financial_data")
+   - columns: какие колонки данных нужны (например, ["month", "revenue"])
 
-class LLMChartCode(BaseModel):
-    """Код графика от LLM."""
-    code: str = Field(description="Чистый Python-код для генерации графика")
-    engine: str = Field(
-        description="Используемый движок: matplotlib или plotly",
-        pattern=r"^(matplotlib|plotly)$",
-    )
+5. Для table-блоков укажи headers и rows, если данные известны из контекста.
 
+## Шаблон документа
+Используй шаблон "{template_name}" как основу для структуры.
 
-class LLMMarkdownContent(BaseModel):
-    """Marp-совместимый Markdown контент от LLM."""
-    markdown: str = Field(description="Marp-совместимый Markdown с вставками графиков")
+## Запрос пользователя
+{query}
 
+## Контекст из документов
+{context}
 
-# === Промпты ===
+## Твоя задача
+Верни структурированный план документа с секциями и блоками.
+"""
+
 
 class ArtifactGeneratorAgent:
-    """Агент для генерации артефактов (PDF, презентации, отчёты)."""
+    """Агент для генерации артефактов (PDF, презентации, отчёты) — архитектура v2.
+
+    Использует один LLM-вызов для планирования, затем программную сборку документа,
+    рендеринг через Marp CLI и сохранение в v2 таблицы.
+    """
 
     def __init__(
         self,
         storage: Optional[StorageProvider] = None,
-        sandbox: Optional[SubprocessSandbox] = None,
-        marp: Optional[MarpRenderer] = None,
+        db_session: Optional[Session] = None,
+        template_manager: Optional[TemplateManager] = None,
+        theme_manager: Optional[ThemeManager] = None,
+        document_builder: Optional[DocumentBuilder] = None,
+        document_validator: Optional[DocumentValidator] = None,
+        artifact_auto_fix: Optional[ArtifactAutoFix] = None,
+        renderer_factory: Optional[RendererFactory] = None,
+        render_validator: Optional[RenderValidator] = None,
     ):
         self.storage = storage or MockStorageProvider()
-        self.sandbox = sandbox or SubprocessSandbox()
-        self.marp = marp or MarpRenderer()
+        self.db_session = db_session
+
+        # Менеджеры шаблонов и тем
+        self.template_manager = template_manager or TemplateManager(db=db_session)
+        self.theme_manager = theme_manager or ThemeManager(db=db_session)
+
+        # Document pipeline
+        self.document_builder = document_builder or DocumentBuilder()
+        self.document_validator = document_validator or DocumentValidator()
+        self.artifact_auto_fix = artifact_auto_fix or ArtifactAutoFix()
+
+        # Render pipeline
+        self.renderer_factory = renderer_factory or RendererFactory()
+        self.render_validator = render_validator or RenderValidator()
 
         # LLM chains: GigaChat (приоритет) или ChatOpenAI (fallback)
         self._gigachat_llm = None
         self._openai_llm = None
-
         self.planning_chain = None
-        self.chart_code_chain = None
-        self.marp_chain = None
 
         # 1. GigaChat (langchain-gigachat) — приоритет
         self._init_gigachat()
@@ -109,9 +149,7 @@ class ArtifactGeneratorAgent:
         # 3. Выбираем, какой LLM использовать для chain
         self.llm = self._gigachat_llm or self._openai_llm
         if self.llm is not None:
-            self.planning_chain = self.llm.with_structured_output(LLMArtifactPlan)
-            self.chart_code_chain = self.llm.with_structured_output(LLMChartCode)
-            self.marp_chain = self.llm.with_structured_output(LLMMarkdownContent)
+            self.planning_chain = self.llm.with_structured_output(ArtifactPlan)
 
     def _init_gigachat(self) -> None:
         """Инициализировать GigaChat через langchain-gigachat."""
@@ -148,11 +186,117 @@ class ArtifactGeneratorAgent:
             self._openai_llm = ChatOpenAI(
                 model=config.OPENAI_MODEL,
                 temperature=0.1,
-                api_key=config.OPENAI_API_KEY,
+                api_key=config.OPENAI_API_KEY,  # type: ignore[arg-type]
                 base_url=config.OPENAI_API_BASE,
             )
         except Exception:
             self._openai_llm = None
+
+    def _make_event(
+        self,
+        event_type: str,
+        phase: str,
+        data: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        """Создать SSE-совместимое событие.
+
+        Args:
+            event_type: Тип события (phase_start, phase_complete, artifact_ready, ...).
+            phase: Название фазы (planning, document_building, ...).
+            data: Дополнительные данные события.
+
+        Returns:
+            dict с полями event, phase, timestamp, data.
+        """
+        event: dict[str, Any] = {
+            "event": event_type,
+            "phase": phase,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if data:
+            event["data"] = data
+        return event
+
+    def _chunks_to_dataframes(
+        self,
+        context: str,
+    ) -> dict[str, pd.DataFrame]:
+        """Преобразовать строковый контекст из RAG в dict[str, DataFrame].
+
+        Парсит JSON-подобные таблицы из контекста. Если контекст содержит
+        структурированные данные в формате JSON, конвертирует их в DataFrame.
+        Если данных нет — возвращает пустой словарь.
+
+        Args:
+            context: Строковый контекст из RAG (answer + chunks).
+
+        Returns:
+            dict[str, pd.DataFrame] — имя источника → DataFrame.
+        """
+        dataframes: dict[str, pd.DataFrame] = {}
+
+        if not context:
+            return dataframes
+
+        # Пробуем распарсить весь контекст как JSON
+        try:
+            parsed = json.loads(context)
+            if isinstance(parsed, dict):
+                for key, value in parsed.items():
+                    if isinstance(value, list) and len(value) > 0:
+                        try:
+                            df = pd.DataFrame(value)
+                            dataframes[key] = df
+                            logger.info(
+                                "Parsed DataFrame from context: key=%s shape=%s",
+                                key, df.shape,
+                            )
+                        except Exception as e:
+                            logger.debug("Failed to parse key %s as DataFrame: %s", key, e)
+            elif isinstance(parsed, list) and len(parsed) > 0:
+                try:
+                    df = pd.DataFrame(parsed)
+                    dataframes["data"] = df
+                    logger.info("Parsed DataFrame from context list: shape=%s", df.shape)
+                except Exception as e:
+                    logger.debug("Failed to parse list as DataFrame: %s", e)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+        # Если JSON не распарсился — ищем JSON-блоки в тексте
+        if not dataframes:
+            import re
+            json_blocks = re.findall(
+                r'```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```',
+                context,
+                re.DOTALL,
+            )
+            for i, block in enumerate(json_blocks):
+                try:
+                    parsed = json.loads(block)
+                    if isinstance(parsed, list) and len(parsed) > 0:
+                        df = pd.DataFrame(parsed)
+                        dataframes[f"data_{i}"] = df
+                        logger.info(
+                            "Parsed DataFrame from JSON block %d: shape=%s",
+                            i, df.shape,
+                        )
+                    elif isinstance(parsed, dict):
+                        for key, value in parsed.items():
+                            if isinstance(value, list) and len(value) > 0:
+                                try:
+                                    df = pd.DataFrame(value)
+                                    dataframes[key] = df
+                                except Exception:
+                                    pass
+                except (json.JSONDecodeError, ValueError):
+                    continue
+
+        logger.info(
+            "Context parsed into %d DataFrames",
+            len(dataframes),
+        )
+        return dataframes
 
     async def generate(
         self,
@@ -161,8 +305,11 @@ class ArtifactGeneratorAgent:
         user_id: int,
         session_id: int,
         message_id: Optional[int] = None,
-    ) -> dict:
-        """Полный цикл генерации артефакта.
+        template_name: str = "corporate_report",
+        theme_name: str = "corporate",
+        output_format: str = "pdf",
+    ) -> dict[str, Any]:
+        """Полный цикл генерации артефакта (v2).
 
         Args:
             query: Запрос пользователя.
@@ -170,260 +317,419 @@ class ArtifactGeneratorAgent:
             user_id: ID пользователя.
             session_id: ID сессии чата.
             message_id: ID сообщения-источника (опционально).
+            template_name: Имя шаблона документа.
+            theme_name: Имя темы оформления.
+            output_format: Целевой формат: pdf, pptx, html, md.
 
         Returns:
             dict с результатами генерации.
         """
-        result = {
+        # Инициализируем результат
+        result: dict[str, Any] = {
             "status": "generating",
+            "project_id": None,
+            "version_id": None,
             "artifact_id": None,
-            "title": None,
-            "artifact_type": None,
-            "error": None,
-            "events": [],  # для SSE
+            "title": "",
+            "artifact_type": output_format,
+            "error": None,  # для обратной совместимости с orchestrator.py
+            "error_message": None,
+            "events": [],
         }
 
         if self.llm is None:
             result["status"] = "error"
             result["error"] = "LLM provider is not available"
+            result["error_message"] = "LLM provider is not available"
             return result
 
         try:
-            # === Фаза 1: Планирование ===
-            logger.info("Phase 1: Planning artifact structure")
-            result["events"].append({"event": "artifact_planning", "data": {"phase": "planning"}})
+            # ================================================================
+            # Phase 1: Planning — единственный LLM-вызов
+            # ================================================================
+            logger.info("Phase 1: Planning artifact structure (v2)")
+            result["events"].append(
+                self._make_event("phase_start", "planning")
+            )
 
-            plan = await self._plan_artifact(query, context)
+            plan = await self._plan_artifact(
+                query=query,
+                context=context,
+                template_name=template_name,
+            )
             result["title"] = plan.title
             result["artifact_type"] = plan.artifact_type
 
-            result["events"].append({
-                "event": "artifact_planning",
-                "data": {
-                    "type": plan.artifact_type,
+            result["events"].append(
+                self._make_event("phase_complete", "planning", {
                     "title": plan.title,
-                    "sections": [s.model_dump() for s in plan.sections],
-                    "charts": [c.model_dump() for c in plan.charts],
-                    "chart_engine": plan.chart_engine,
-                },
-            })
+                    "artifact_type": plan.artifact_type,
+                    "sections_count": len(plan.sections),
+                })
+            )
+            logger.info(
+                "Planning complete: title=%s type=%s sections=%d",
+                plan.title, plan.artifact_type, len(plan.sections),
+            )
 
-            # === Фаза 2: Генерация графиков ===
-            chart_paths = []
-            interactive_paths = []
+            # ================================================================
+            # Phase 2: Document Building
+            # ================================================================
+            logger.info("Phase 2: Building document model")
+            result["events"].append(
+                self._make_event("phase_start", "document_building")
+            )
 
-            if plan.charts:
-                logger.info(f"Phase 2: Generating {len(plan.charts)} charts using {plan.chart_engine}")
-                for i, chart in enumerate(plan.charts):
-                    result["events"].append({
-                        "event": "chart_generating",
-                        "data": {
-                            "chart_index": i,
-                            "chart_title": chart.title,
-                            "total_charts": len(plan.charts),
-                            "engine": plan.chart_engine,
-                        },
-                    })
+            # Получаем тему
+            theme = self.theme_manager.get_theme(theme_name)
+            if theme is None:
+                theme = self.theme_manager.get_default_theme()
+                logger.warning("Theme '%s' not found, using default", theme_name)
 
-                    chart_result = await self._generate_chart(chart, context, plan.chart_engine)
-                    if chart_result.success:
-                        for fp in chart_result.output_files:
-                            if fp.endswith(".html"):
-                                interactive_paths.append(fp)
-                            else:
-                                chart_paths.append(fp)
+            # Создаём контекст артефакта
+            artifact_context = ArtifactContext(
+                language="ru",
+                company="",
+                timezone="Europe/Moscow",
+                currency="RUB",
+                theme_name=theme_name,
+            )
 
-                        result["events"].append({
-                            "event": "chart_ready",
-                            "data": {
-                                "chart_index": i,
-                                "chart_path": chart_result.output_files[0] if chart_result.output_files else None,
-                            },
+            document = self.document_builder.build(
+                plan=plan,
+                context=artifact_context,
+                theme=theme,
+            )
+
+            result["events"].append(
+                self._make_event("phase_complete", "document_building", {
+                    "sections": len(document.sections),
+                    "blocks": sum(len(s.blocks) for s in document.sections),
+                    "asset_refs": len(document.get_all_asset_refs()),
+                })
+            )
+            logger.info(
+                "Document built: sections=%d blocks=%d assets=%d",
+                len(document.sections),
+                sum(len(s.blocks) for s in document.sections),
+                len(document.get_all_asset_refs()),
+            )
+
+            # ================================================================
+            # Phase 3: Document Validation
+            # ================================================================
+            logger.info("Phase 3: Validating document model")
+            result["events"].append(
+                self._make_event("phase_start", "document_validation")
+            )
+
+            validation_result = await self.document_validator.validate(document)
+
+            if not validation_result.passed:
+                # Проверяем, можно ли автоматически исправить
+                fixable_errors = [
+                    e for e in validation_result.errors
+                    if e.check_name in ("empty_blocks", "section_structure")
+                ]
+                critical_errors = [
+                    e for e in validation_result.errors
+                    if e.check_name not in ("empty_blocks", "section_structure")
+                ]
+
+                if fixable_errors and not critical_errors:
+                    logger.info(
+                        "Auto-fixing %d fixable validation errors",
+                        len(fixable_errors),
+                    )
+                    document = await self.artifact_auto_fix.fix(
+                        document, validation_result,
+                    )
+                    # Перевалидируем после фикса
+                    validation_result = await self.document_validator.validate(document)
+                    logger.info(
+                        "After auto-fix: passed=%s errors=%d",
+                        validation_result.passed,
+                        len(validation_result.errors),
+                    )
+
+                if not validation_result.passed:
+                    error_msg = (
+                        f"Document validation failed: "
+                        f"{'; '.join(e.message for e in validation_result.errors[:5])}"
+                    )
+                    logger.error(error_msg)
+                    result["status"] = "error"
+                    result["error"] = error_msg
+                    result["error_message"] = error_msg
+                    result["events"].append(
+                        self._make_event("phase_complete", "document_validation", {
+                            "passed": False,
+                            "errors": len(validation_result.errors),
                         })
-                    else:
-                        logger.warning(f"Chart {i} generation failed: {chart_result.error}")
+                    )
+                    result["events"].append(
+                        self._make_event("artifact_error", "document_validation", {
+                            "error": error_msg,
+                        })
+                    )
+                    return result
 
-            # === Фаза 3: Генерация Marp Markdown ===
-            logger.info("Phase 3: Generating Marp markdown")
-            result["events"].append({
-                "event": "artifact_progress",
-                "data": {"percent": 60, "stage": "generating_content"},
-            })
+            result["events"].append(
+                self._make_event("phase_complete", "document_validation", {
+                    "passed": True,
+                    "checks": len(validation_result.checks),
+                })
+            )
+            logger.info("Document validation passed: %d checks", len(validation_result.checks))
 
-            content = await self._generate_markdown(plan, chart_paths, interactive_paths)
+            # ================================================================
+            # Phase 4: Rendering
+            # ================================================================
+            logger.info("Phase 4: Rendering to %s", output_format)
+            result["events"].append(
+                self._make_event("phase_start", "rendering", {
+                    "format": output_format,
+                })
+            )
 
-            # === Фаза 4: Рендеринг ===
-            logger.info(f"Phase 4: Rendering to {plan.artifact_type}")
-            result["events"].append({
-                "event": "artifact_progress",
-                "data": {"percent": 80, "stage": "rendering"},
-            })
+            # Преобразуем контекст в DataFrame для AssetResolver
+            dataframes = self._chunks_to_dataframes(context)
 
-            render_result = await self._render(content, plan.artifact_type)
+            # Создаём AssetResolver с данными
+            asset_resolver = AssetResolver(
+                asset_manager=AssetManager(),
+                chart_builder=ChartBuilder(),
+                diagram_builder=DiagramBuilder(),
+                formula_builder=FormulaBuilder(),
+            )
+
+            # Разрешаем все ассеты (lazy — только если renderer до них дойдёт)
+            asset_refs = document.get_all_asset_refs()
+            if asset_refs:
+                logger.info("Resolving %d asset references", len(asset_refs))
+                await asset_resolver.resolve_all(asset_refs, dataframes, theme)
+
+            # Создаём RendererFactory с asset_resolver'ом
+            renderer_factory = RendererFactory(
+                marp_generator=MarpGenerator(asset_resolver=asset_resolver),
+                asset_resolver=asset_resolver,
+            )
+
+            render_result = await renderer_factory.render(document, output_format)
 
             if not render_result.success:
-                raise RuntimeError(f"Render failed: {render_result.error}")
+                error_msg = f"Render failed: {render_result.error}"
+                logger.error(error_msg)
+                result["status"] = "error"
+                result["error"] = error_msg
+                result["error_message"] = error_msg
+                result["events"].append(
+                    self._make_event("phase_complete", "rendering", {
+                        "success": False,
+                        "error": render_result.error,
+                    })
+                )
+                result["events"].append(
+                    self._make_event("artifact_error", "rendering", {
+                        "error": error_msg,
+                    })
+                )
+                return result
 
-            # === Фаза 5: Сохранение ===
-            logger.info("Phase 5: Saving artifact")
-            result["events"].append({
-                "event": "artifact_progress",
-                "data": {"percent": 95, "stage": "saving"},
-            })
+            result["events"].append(
+                self._make_event("phase_complete", "rendering", {
+                    "success": True,
+                    "file_path": render_result.file_path,
+                    "file_size": render_result.file_size,
+                })
+            )
+            logger.info(
+                "Render complete: path=%s size=%d",
+                render_result.file_path, render_result.file_size,
+            )
 
-            artifact_info = await self._save_artifact(
-                render_result, plan, user_id, session_id, message_id,
+            # ================================================================
+            # Phase 5: Render Validation
+            # ================================================================
+            logger.info("Phase 5: Validating render result")
+            result["events"].append(
+                self._make_event("phase_start", "render_validation")
+            )
+
+            render_validation = await self.render_validator.validate(render_result)
+
+            if not render_validation.passed:
+                logger.warning(
+                    "Render validation issues: %d errors",
+                    len(render_validation.errors),
+                )
+                # Не прерываем — файл уже создан, только логируем
+
+            result["events"].append(
+                self._make_event("phase_complete", "render_validation", {
+                    "passed": render_validation.passed,
+                    "checks": len(render_validation.checks),
+                    "errors": len(render_validation.errors),
+                })
+            )
+
+            # ================================================================
+            # Phase 6: Save
+            # ================================================================
+            logger.info("Phase 6: Saving artifact")
+            result["events"].append(
+                self._make_event("phase_start", "saving")
+            )
+
+            save_result = await self._save_artifact_v2(
+                render_result=render_result,
+                document=document,
+                plan=plan,
+                user_id=user_id,
+                session_id=session_id,
+                message_id=message_id,
+                template_name=template_name,
+                theme_name=theme_name,
+                output_format=output_format,
+                validation_result=validation_result,
+                render_validation=render_validation,
             )
 
             result["status"] = "ready"
-            result["artifact_id"] = artifact_info.get("id")
-            result["events"].append({
-                "event": "artifact_ready",
-                "data": {
-                    "id": artifact_info.get("id"),
-                    "type": plan.artifact_type,
-                    "url": artifact_info.get("download_url"),
-                    "filename": artifact_info.get("filename"),
-                    "size": render_result.file_size,
-                },
-            })
+            result["project_id"] = save_result.get("project_id")
+            result["version_id"] = save_result.get("version_id")
+            result["artifact_id"] = save_result.get("artifact_id")
 
-            logger.info(f"Artifact generated successfully: {artifact_info.get('filename')}")
+            result["events"].append(
+                self._make_event("artifact_ready", "saving", {
+                    "project_id": save_result.get("project_id"),
+                    "version_id": save_result.get("version_id"),
+                    "artifact_id": save_result.get("artifact_id"),
+                    "type": output_format,
+                    "url": save_result.get("download_url"),
+                    "filename": save_result.get("filename"),
+                    "size": render_result.file_size,
+                })
+            )
+
+            logger.info(
+                "Artifact generated successfully: project=%s version=%s file=%s",
+                save_result.get("project_id"),
+                save_result.get("version_id"),
+                save_result.get("filename"),
+            )
 
         except Exception as e:
-            logger.exception("Artifact generation failed")
+            logger.exception("Artifact generation failed (v2)")
             result["status"] = "error"
             result["error"] = str(e)
-            result["events"].append({
-                "event": "artifact_error",
-                "data": {"error": str(e)},
-            })
+            result["error_message"] = str(e)
+            result["events"].append(
+                self._make_event("artifact_error", "unknown", {
+                    "error": str(e),
+                })
+            )
 
         return result
 
-    async def _plan_artifact(self, query: str, context: str) -> ArtifactPlan:
-        """Фаза 1: Планирование структуры артефакта."""
-        llm_plan = await self.planning_chain.ainvoke({
-            "query": query,
-            "context": context[:50000] if context else "Нет контекста",
-        })
+    async def _plan_artifact(
+        self,
+        query: str,
+        context: str,
+        template_name: str,
+    ) -> ArtifactPlan:
+        """Phase 1: Планирование структуры артефакта через LLM.
 
-        # with_structured_output возвращает Pydantic модель (type checker видит dict — false positive)
+        Единственный LLM-вызов во всём пайплайне.
+        LLM возвращает ArtifactPlan — только смысловую структуру.
+
+        Args:
+            query: Запрос пользователя.
+            context: Контекст из документов.
+            template_name: Имя шаблона.
+
+        Returns:
+            ArtifactPlan с секциями и блоками.
+        """
+        if self.planning_chain is None:
+            # Fallback: создаём план из шаблона
+            logger.warning("LLM not available, using template fallback")
+            template_plan = self.template_manager.apply_template(
+                template_name=template_name,
+                variables={"title": query[:100]},
+            )
+            return template_plan
+
+        # Обрезаем контекст до разумного размера
+        truncated_context = context[:50000] if context else "Нет контекста"
+
+        prompt = ARTIFACT_PLANNING_PROMPT.format(
+            query=query,
+            context=truncated_context,
+            template_name=template_name,
+        )
+
+        # Pylance: planning_chain narrowed to not-None by the check above
+        chain = self.planning_chain
+        llm_plan = await chain.ainvoke(prompt)  # type: ignore[arg-type]
+
+        # with_structured_output возвращает Pydantic модель
+        if isinstance(llm_plan, ArtifactPlan):
+            return llm_plan
+
+        # Если вернулся dict — конвертируем
         plan_data = llm_plan if isinstance(llm_plan, dict) else llm_plan.model_dump()  # type: ignore[union-attr]
-
-        # Конвертируем LLM-план в нашу модель
-        sections = []
-        for s in plan_data.get("sections", []):
-            sections.append({
-                "title": s.get("title", ""),
-                "description": s.get("description", ""),
-                "requires_chart": s.get("requires_chart"),
-            })
-
-        charts = []
-        for i, c in enumerate(plan_data.get("charts", [])):
-            charts.append(ChartPlan(
-                chart_index=i,
-                chart_type=c.get("chart_type", "bar"),
-                title=c.get("title", f"График {i + 1}"),
-                data_source=c.get("data_source", ""),
-                engine=plan_data.get("chart_engine", "matplotlib"),
-            ))
-
         return ArtifactPlan(
             title=plan_data.get("title", "Артефакт"),
             artifact_type=plan_data.get("artifact_type", "pdf"),
-            chart_engine=plan_data.get("chart_engine", "matplotlib"),
-            sections=sections,
-            charts=charts,
+            sections=plan_data.get("sections", []),
+            reasoning=plan_data.get("reasoning", ""),
         )
 
-    async def _generate_chart(
-        self,
-        chart: ChartPlan,
-        context: str,
-        engine: str,
-    ) -> SandboxResult:
-        """Фаза 2: Генерация одного графика."""
-        # LLM генерирует код
-        llm_code = await self.chart_code_chain.ainvoke({
-            "engine": engine,
-            "chart_index": chart.chart_index,
-            "chart_title": chart.title,
-            "chart_description": chart.data_source,
-            "data": context[:30000] if context else "Нет данных",
-        })
-
-        # with_structured_output возвращает Pydantic модель
-        code_data = llm_code if isinstance(llm_code, dict) else llm_code.model_dump()  # type: ignore[union-attr]
-        code_str = code_data.get("code", "")
-
-        # Выполняем код в sandbox
-        result = self.sandbox.execute(code_str, chart.chart_index)
-        return result
-
-    async def _generate_markdown(
-        self,
-        plan: ArtifactPlan,
-        chart_paths: list[str],
-        interactive_paths: list[str],
-    ) -> ArtifactContent:
-        """Фаза 3: Генерация Marp Markdown."""
-        # Формируем структуру для промпта
-        structure = {
-            "title": plan.title,
-            "sections": [
-                {
-                    "title": s.title if isinstance(s, dict) else s.title,
-                    "description": s.description if isinstance(s, dict) else s.description,
-                }
-                for s in plan.sections
-            ],
-        }
-
-        chart_paths_str = "\n".join(chart_paths) if chart_paths else "Нет графиков"
-        if interactive_paths:
-            chart_paths_str += "\n\nИнтерактивные графики (Plotly):\n" + "\n".join(interactive_paths)
-
-        llm_markdown = await self.marp_chain.ainvoke({
-            "title": plan.title,
-            "structure": json.dumps(structure, ensure_ascii=False),
-            "chart_paths": chart_paths_str,
-        })
-
-        # with_structured_output возвращает Pydantic модель
-        md_data = llm_markdown if isinstance(llm_markdown,
-                                             dict) else llm_markdown.model_dump()  # type: ignore[union-attr]
-        markdown_content = md_data.get("markdown", "")
-
-        return ArtifactContent(
-            title=plan.title,
-            artifact_type=plan.artifact_type,
-            markdown_content=markdown_content,
-            chart_paths=chart_paths,
-            interactive_chart_paths=interactive_paths,
-        )
-
-    async def _render(self, content: ArtifactContent, output_format: str) -> RenderResult:
-        """Фаза 4: Рендеринг через Marp CLI."""
-        return self.marp.render(content.markdown_content, output_format)
-
-    async def _save_artifact(
+    async def _save_artifact_v2(
         self,
         render_result: RenderResult,
+        document: DocumentModel,
         plan: ArtifactPlan,
         user_id: int,
         session_id: int,
         message_id: Optional[int] = None,
-    ) -> dict:
-        """Фаза 5: Сохранение артефакта в StorageProvider."""
+        template_name: str = "corporate_report",
+        theme_name: str = "corporate",
+        output_format: str = "pdf",
+        validation_result: Optional[ValidationResult] = None,
+        render_validation: Optional[ValidationResult] = None,
+    ) -> dict[str, Any]:
+        """Phase 6: Сохранение артефакта в v2 таблицы и StorageProvider.
+
+        Создаёт:
+        - artifact_projects — проект артефакта
+        - artifact_versions — версия с DocumentModel
+        - artifact_assets — ассеты (если есть)
+        - Файл через StorageProvider
+
+        Args:
+            render_result: Результат рендеринга.
+            document: DocumentModel.
+            plan: ArtifactPlan от LLM.
+            user_id: ID пользователя.
+            session_id: ID сессии чата.
+            message_id: ID сообщения-источника.
+            template_name: Имя шаблона.
+            theme_name: Имя темы.
+            output_format: Целевой формат.
+            validation_result: Результат валидации документа.
+            render_validation: Результат валидации рендера.
+
+        Returns:
+            dict с project_id, version_id, artifact_id, filename, download_url.
+        """
         if not render_result.file_path or not os.path.exists(render_result.file_path):
             raise RuntimeError("Render result file not found")
 
         # Определяем имя файла
         safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in plan.title)
-        ext = plan.artifact_type
-        filename = f"{safe_title[:50]}.{ext}"
+        filename = f"{safe_title[:50]}.{output_format}"
 
         # Сохраняем через StorageProvider
         with open(render_result.file_path, "rb") as f:
@@ -432,11 +738,109 @@ class ArtifactGeneratorAgent:
                 content=f,
             )
 
+        file_size = os.path.getsize(render_result.file_path)
+
         # Очищаем временный файл
-        os.unlink(render_result.file_path)
+        try:
+            os.unlink(render_result.file_path)
+        except OSError:
+            pass
+
+        # Сохраняем в v2 таблицы, если есть БД
+        project_id: Optional[int] = None
+        version_id: Optional[int] = None
+        artifact_id: Optional[int] = None
+
+        if self.db_session is not None:
+            try:
+                # 1. Создаём проект
+                project = ArtifactProject(
+                    user_id=user_id,
+                    session_id=session_id,
+                    title=plan.title,
+                    template_name=template_name,
+                    current_version=1,
+                    context={
+                        "theme_name": theme_name,
+                        "output_format": output_format,
+                        "language": "ru",
+                        "timezone": "Europe/Moscow",
+                        "currency": "RUB",
+                    },
+                )
+                self.db_session.add(project)
+                self.db_session.flush()  # получаем project.id
+
+                # 2. Создаём версию
+                version = ArtifactVersion(
+                    project_id=project.id,
+                    version_number=1,
+                    status=ArtifactStatus.READY,
+                    document_model=document.model_dump(mode="json"),
+                    dependency_graph=document.dependency_graph.model_dump(mode="json"),
+                    storage_path=storage_path,
+                    file_size=file_size,
+                    artifact_type=output_format,
+                    document_validation=(
+                        validation_result.model_dump(mode="json")
+                        if validation_result else None
+                    ),
+                    render_validation=(
+                        render_validation.model_dump(mode="json")
+                        if render_validation else None
+                    ),
+                )
+                self.db_session.add(version)
+                self.db_session.flush()  # получаем version.id
+
+                # 3. Сохраняем ассеты
+                asset_refs = document.get_all_asset_refs()
+                for ref in asset_refs:
+                    if ref.status == "resolved" and ref.resolved_asset:
+                        asset = ref.resolved_asset
+                        # Сохраняем ассет в StorageProvider
+                        if os.path.exists(asset.file_path):
+                            with open(asset.file_path, "rb") as af:
+                                asset_storage_path = await self.storage.upload(
+                                    file_path=f"artifacts/{user_id}/assets/{asset.asset_id}_{asset.name}",
+                                    content=af,
+                                )
+
+                            asset_record = ArtifactAsset(
+                                asset_id=asset.asset_id,
+                                version_id=version.id,
+                                asset_type=asset.asset_type,
+                                name=asset.name,
+                                mime_type=asset.mime_type,
+                                storage_path=asset_storage_path,
+                                asset_metadata=asset.metadata,
+                                size_bytes=asset.size_bytes,
+                            )
+                            self.db_session.add(asset_record)
+
+                self.db_session.commit()
+                self.db_session.refresh(project)
+                self.db_session.refresh(version)
+
+                project_id = int(project.id)  # type: ignore[arg-type]
+                version_id = int(version.id)  # type: ignore[arg-type]
+                artifact_id = int(version.id)  # type: ignore[arg-type]  # version.id как artifact_id для совместимости
+
+                logger.info(
+                    "Saved to v2 tables: project=%d version=%d",
+                    project_id, version_id,
+                )
+
+            except Exception as e:
+                self.db_session.rollback()
+                logger.error("Failed to save to v2 tables: %s", e)
+                # Не прерываем — файл уже сохранён в StorageProvider
+                # Просто возвращаем без ID из БД
 
         return {
-            "id": None,  # будет заполнено при сохранении в БД
+            "project_id": project_id,
+            "version_id": version_id,
+            "artifact_id": artifact_id,
             "filename": filename,
             "storage_path": storage_path,
             "download_url": f"/api/v1/artifacts/download/{filename}",

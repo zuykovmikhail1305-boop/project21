@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # === Identified Mixin ===
@@ -344,6 +344,23 @@ class DocumentModel(BaseModel):
         return refs
 
 
+# === SectionPlan (типизированная секция для structured_output) ===
+
+
+class SectionPlan(BaseModel):
+    """A planned section with its blocks — typed model for GigaChat structured output.
+
+    GigaChat's function calling needs proper Pydantic models with typed fields
+    to generate correct output. Using list[dict[str, Any]] causes the LLM to
+    return sections: [{}] because it doesn't understand the expected structure.
+    """
+    title: str = Field(description="Заголовок секции")
+    blocks: list[dict[str, Any]] = Field(
+        description="Список блоков контента. Каждый блок: {type, text, level, items, ...}",
+        min_length=1,  # At least 1 block required
+    )
+
+
 # === ArtifactPlan (смысловая структура от LLM) ===
 
 
@@ -351,11 +368,22 @@ class ArtifactPlan(BaseModel):
     """План артефакта от LLM — ТОЛЬКО смысловая структура, без указания типов графиков."""
     title: str
     artifact_type: str = "pdf"
-    sections: list[dict[str, Any]] = Field(
+    sections: list[SectionPlan] = Field(
         default_factory=list,
-        description="Список секций. Каждая: {title, blocks: [{type, text, description, data_source, ...}]}",
+        description="Список секций. Каждая секция содержит заголовок и список блоков.",
     )
     reasoning: str = ""
+
+    @model_validator(mode="after")
+    def ensure_sections_have_blocks(self) -> "ArtifactPlan":
+        """Validate that every section has at least one block."""
+        for i, section in enumerate(self.sections):
+            if not section.blocks:
+                raise ValueError(
+                    f"Section {i} ('{section.title}') has no blocks. "
+                    "Each section must contain at least one block."
+                )
+        return self
 
 
 # === Validation ===

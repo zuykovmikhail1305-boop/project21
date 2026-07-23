@@ -205,10 +205,17 @@ async def chat_stream(
             if artifact_result:
                 artifact_events = artifact_result.get("events", [])
                 for event in artifact_events:
-                    yield {
-                        "event": event["event"],
-                        "data": json.dumps(event["data"]),
-                    }
+                    try:
+                        yield {
+                            "event": event.get("event", "artifact_event"),
+                            "data": json.dumps(event.get("data", {})),
+                        }
+                    except (KeyError, TypeError) as e:
+                        logger.error("Failed to serialize artifact event: %s", e)
+                        yield {
+                            "event": "error",
+                            "data": json.dumps({"error": "Internal server error"}),
+                        }
 
             # Stream answer in chunks for real-time feel
             chunk_size = 50

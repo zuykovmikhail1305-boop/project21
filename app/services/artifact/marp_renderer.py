@@ -6,6 +6,7 @@
 
 import logging
 import os
+import shutil
 import subprocess
 import uuid
 from typing import Optional
@@ -36,25 +37,70 @@ class MarpRenderer:
         "html": "text/html",
     }
 
-    def __init__(self, output_dir: str = "/tmp/artifacts", marp_bin: str = "marp"):
+    def __init__(self, output_dir: str = "/tmp/artifacts", marp_bin: Optional[str] = None):
         self.output_dir = output_dir
-        self.marp_bin = marp_bin
+        self.marp_bin = self._resolve_marp_bin(marp_bin)
         os.makedirs(output_dir, exist_ok=True)
         self._marp_available = self._check_marp()
 
+    @staticmethod
+    def _resolve_marp_bin(marp_bin: Optional[str] = None) -> Optional[str]:
+        """Разрешить полный путь к Marp CLI.
+
+        На Windows npm устанавливает marp.cmd, который не находится
+        через subprocess.run(['marp', ...]) без shell=True, т.к. Windows
+        не использует PATHEXT для поиска. shutil.which() учитывает PATHEXT.
+
+        Args:
+            marp_bin: Явный путь к бинарнику (опционально).
+
+        Returns:
+            Полный путь к Marp CLI или None, если не найден.
+        """
+        if marp_bin:
+            # Если передан явный путь — проверяем его
+            if shutil.which(marp_bin) is not None:
+                return marp_bin
+            return None
+
+        # Ищем marp через shutil.which — учитывает PATHEXT на Windows
+        resolved = shutil.which("marp")
+        if resolved is not None:
+            logger.debug("Marp CLI resolved to: %s", resolved)
+            return resolved
+
+        # Fallback: явно проверяем marp.cmd на Windows
+        if os.name == "nt":
+            for candidate in ["marp.cmd", "marp.bat"]:
+                resolved = shutil.which(candidate)
+                if resolved is not None:
+                    logger.debug("Marp CLI resolved to: %s", resolved)
+                    return resolved
+
+        return None
+
     def _check_marp(self) -> bool:
         """Проверить доступность Marp CLI."""
+        if self.marp_bin is None:
+            logger.warning(
+                "Marp CLI not found. Install with: npm install -g @marp-team/marp-cli"
+            )
+            return False
+
         try:
             result = subprocess.run(
                 [self.marp_bin, "--version"],
                 capture_output=True, text=True, timeout=5,
             )
             if result.returncode == 0:
-                logger.info(f"Marp CLI available: {result.stdout.strip()}")
+                logger.info("Marp CLI available: %s (%s)", self.marp_bin, result.stdout.strip())
                 return True
             return False
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            logger.warning("Marp CLI not found. Install with: npm install -g @marp-team/marp-cli")
+            logger.warning(
+                "Marp CLI not found at '%s'. Install with: npm install -g @marp-team/marp-cli",
+                self.marp_bin,
+            )
             return False
 
     def render(self, markdown_content: str, output_format: str) -> RenderResult:
@@ -74,7 +120,7 @@ class MarpRenderer:
                       f"Supported: {', '.join(self.SUPPORTED_FORMATS.keys())}",
             )
 
-        if not self._marp_available:
+        if not self._marp_available or self.marp_bin is None:
             return RenderResult(
                 success=False,
                 error="Marp CLI не установлен. Установите: npm install -g @marp-team/marp-cli",
@@ -89,7 +135,7 @@ class MarpRenderer:
             with open(md_path, "w", encoding="utf-8") as f:
                 f.write(markdown_content)
 
-            # Запускаем Marp CLI
+            # Запускаем Marp CLI (используем полный путь из self.marp_bin)
             result = subprocess.run(
                 [
                     self.marp_bin,

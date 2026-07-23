@@ -49,6 +49,7 @@ from app.services.artifact.models import (
     ParagraphBlock,
     RenderResult,
     Section,
+    SectionPlan,
     Theme as ThemeModel,
     ThemeColors,
     ThemeFonts,
@@ -314,16 +315,16 @@ def sample_artifact_plan() -> ArtifactPlan:
         title="Test Report",
         artifact_type="pdf",
         sections=[
-            {
-                "title": "Introduction",
-                "blocks": [
+            SectionPlan(
+                title="Introduction",
+                blocks=[
                     {"type": "heading", "level": 1, "text": "Introduction"},
                     {"type": "paragraph", "text": "This is a test report."},
                 ],
-            },
-            {
-                "title": "Data",
-                "blocks": [
+            ),
+            SectionPlan(
+                title="Data",
+                blocks=[
                     {"type": "heading", "level": 2, "text": "Sales Data"},
                     {
                         "type": "chart",
@@ -332,7 +333,7 @@ def sample_artifact_plan() -> ArtifactPlan:
                         "columns": ["month", "revenue"],
                     },
                 ],
-            },
+            ),
         ],
         reasoning="Test plan for integration tests",
     )
@@ -872,16 +873,16 @@ class TestFullPipeline:
             title="Integration Test Report",
             artifact_type="pdf",
             sections=[
-                {
-                    "title": "Executive Summary",
-                    "blocks": [
+                SectionPlan(
+                    title="Executive Summary",
+                    blocks=[
                         {"type": "heading", "level": 1, "text": "Executive Summary"},
                         {"type": "paragraph", "text": "This is a summary."},
                     ],
-                },
-                {
-                    "title": "Charts",
-                    "blocks": [
+                ),
+                SectionPlan(
+                    title="Charts",
+                    blocks=[
                         {
                             "type": "chart",
                             "description": "Revenue by quarter",
@@ -889,7 +890,7 @@ class TestFullPipeline:
                             "columns": ["quarter", "revenue"],
                         },
                     ],
-                },
+                ),
             ],
             reasoning="Test plan",
         )
@@ -993,13 +994,13 @@ This is a test report.
             title="Full Pipeline Test",
             artifact_type="pdf",
             sections=[
-                {
-                    "title": "Introduction",
-                    "blocks": [
+                SectionPlan(
+                    title="Introduction",
+                    blocks=[
                         {"type": "heading", "level": 1, "text": "Introduction"},
                         {"type": "paragraph", "text": "Full pipeline integration test."},
                     ],
-                },
+                ),
             ],
             reasoning="Integration test",
         )

@@ -266,17 +266,8 @@ class AgentOrchestrator:
             state["template_name"] = template_name
             state["output_format"] = output_format
 
-            # Получаем контекст из search_result, если он есть
-            context = ""
-            search_result = state.get("search_result")
-            if search_result:
-                context = search_result.get("answer", "")  # type: ignore[union-attr]
-                # Добавляем chunks
-                chunks = search_result.get("chunks", [])  # type: ignore[union-attr]
-                if chunks:
-                    context += "\n\n" + "\n\n".join(
-                        c.get("content", "") for c in chunks[:5]
-                    )
+            # Получаем контекст из поиска (выполняет поиск, если его ещё нет)
+            context = await self._get_context_from_search(state)
 
             result = await self.artifact_gen.generate(
                 query=state["query"],

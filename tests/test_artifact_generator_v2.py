@@ -36,6 +36,7 @@ from app.services.artifact.models import (
     ParagraphBlock,
     RenderResult,
     Section,
+    SectionPlan,
     Theme,
     ThemeColors,
     ThemeFonts,
@@ -105,20 +106,20 @@ def sample_artifact_plan() -> ArtifactPlan:
         title="Test Report",
         artifact_type="presentation",
         sections=[
-            {
-                "title": "Introduction",
-                "blocks": [
+            SectionPlan(
+                title="Introduction",
+                blocks=[
                     {"type": "heading", "level": 1, "text": "Introduction"},
                     {"type": "paragraph", "text": "This is an overview"},
                 ],
-            },
-            {
-                "title": "Analysis",
-                "blocks": [
+            ),
+            SectionPlan(
+                title="Analysis",
+                blocks=[
                     {"type": "heading", "level": 2, "text": "Data Analysis"},
                     {"type": "chart", "description": "Revenue by month", "data_source": "financial_data", "columns": ["month", "revenue"]},
                 ],
-            },
+            ),
         ],
         reasoning="Standard report structure",
     )
@@ -288,7 +289,7 @@ def mock_template_manager():
     tm.apply_template.return_value = ArtifactPlan(
         title="Template Report",
         artifact_type="pdf",
-        sections=[{"title": "Section 1", "blocks": [{"type": "paragraph", "text": "Template content"}]}],
+        sections=[SectionPlan(title="Section 1", blocks=[{"type": "paragraph", "text": "Template content"}])],
     )
     return tm
 
@@ -1338,3 +1339,51 @@ class TestHelperMethods:
         )
         result = agent._chunks_to_dataframes(context)
         assert len(result) >= 2  # должно быть 2 DataFrame'а
+
+
+# ============================================================
+# Tests for empty-blocks scenario
+# ============================================================
+
+
+def test_plan_with_empty_sections_raises_validation_error():
+    """ArtifactPlan should reject sections with empty blocks list.
+
+    Note: SectionPlan has min_length=1 on blocks, so validation fails
+    at the SectionPlan level (before ArtifactPlan's validator runs).
+    """
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError, match="at least 1 item"):
+        ArtifactPlan(
+            title="Test",
+            sections=[SectionPlan(title="Empty Section", blocks=[])],
+        )
+
+
+def test_document_builder_handles_empty_sections(caplog):
+    """DocumentBuilder should handle empty sections by injecting default blocks."""
+    builder = DocumentBuilder()
+    # Use model_construct to bypass Pydantic validation (simulates a plan
+    # that came from a non-validated source or an older cached version)
+    plan = ArtifactPlan.model_construct(
+        title="Test",
+        sections=[SectionPlan.model_construct(title="Section 1", blocks=[])],
+    )
+    doc = builder.build(plan)
+    assert len(doc.sections) == 1
+    assert len(doc.sections[0].blocks) >= 1  # Should have injected default
+    assert "has no blocks" in caplog.text
+
+
+def test_full_pipeline_with_empty_plan():
+    """Full pipeline should handle empty sections gracefully."""
+    # Use model_construct to bypass Pydantic validation
+    plan = ArtifactPlan.model_construct(
+        title="Test",
+        sections=[SectionPlan.model_construct(title="Section 1", blocks=[])],
+    )
+    builder = DocumentBuilder()
+    doc = builder.build(plan)
+    assert doc is not None
+    assert len(doc.sections) == 1
+    assert len(doc.sections[0].blocks) >= 1

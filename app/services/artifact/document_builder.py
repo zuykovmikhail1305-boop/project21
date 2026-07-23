@@ -32,6 +32,7 @@ from app.services.artifact.models import (
     ParagraphBlock,
     QuoteBlock,
     Section,
+    SectionPlan,
     TableBlock,
     Theme,
 )
@@ -90,12 +91,32 @@ class DocumentBuilder:
         )
         return doc
 
-    def _build_section(self, data: dict[str, Any]) -> Section:
-        """Построить секцию из данных плана."""
-        section = Section(
-            title=data.get("title", "Untitled Section"),
-        )
-        for block_data in data.get("blocks", []):
+    def _build_section(self, data: dict[str, Any] | SectionPlan) -> Section:
+        """Построить секцию из данных плана.
+
+        Args:
+            data: Секция из ArtifactPlan — может быть SectionPlan (типизированная)
+                  или dict (для обратной совместимости с model_construct и тестами).
+        """
+        if isinstance(data, SectionPlan):
+            title = data.title
+            blocks_data = data.blocks
+        else:
+            title = data.get("title", "Untitled Section")
+            blocks_data = data.get("blocks", [])
+
+        section = Section(title=title)
+
+        if not blocks_data:
+            logger.warning(
+                "Section '%s' has no blocks. Injecting default paragraph.",
+                section.title,
+            )
+            blocks_data = [
+                {"type": "paragraph", "text": f"Раздел: {section.title}"},
+            ]
+
+        for block_data in blocks_data:
             block = self._build_block(block_data)
             if block:
                 section.blocks.append(block)

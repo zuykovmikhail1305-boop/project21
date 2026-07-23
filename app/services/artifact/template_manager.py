@@ -14,7 +14,7 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app.models.artifact_v2 import ArtifactTemplate
-from app.services.artifact.models import ArtifactPlan
+from app.services.artifact.models import ArtifactPlan, SectionPlan
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ class TemplateManager:
         title = variables.get("title") or template["display_name"]
         return ArtifactPlan(
             title=title,
-            sections=[{"title": template["display_name"], "blocks": resolved_blocks}],
+            sections=[SectionPlan(title=template["display_name"], blocks=resolved_blocks)],
         )
 
     def create_template(

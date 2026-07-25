@@ -16,10 +16,6 @@ from typing import Any, Optional
 from app.agents.presentation.base import BasePresentationAgent
 from app.agents.presentation.models import ResearchResult
 from app.agents.search_rag_agent import SearchRAGAgent
-from app.services.vector_store import VectorStore
-from app.services.reranker import Reranker
-from app.services.embedder import EmbedderService
-from app.core.dependencies import get_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +58,10 @@ class ResearchAgent(BasePresentationAgent):
     def __init__(
         self,
         search_rag: Optional[SearchRAGAgent] = None,
-        vector_store: Optional[VectorStore] = None,
-        embedder: Optional[EmbedderService] = None,
-        reranker: Optional[Reranker] = None,
+        token: Optional[str] = None,
     ) -> None:
         super().__init__()
-        self.search_rag = search_rag or SearchRAGAgent(
-            vector_store=vector_store or VectorStore(),
-            embedder=embedder or get_embedder(),
-            reranker=reranker or Reranker(),
-        )
+        self.search_rag = search_rag or SearchRAGAgent(token=token or "")
         self._extract_chain = self._build_text_chain(RESEARCH_EXTRACT_PROMPT)
 
     async def research(

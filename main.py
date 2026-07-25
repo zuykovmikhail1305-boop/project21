@@ -145,8 +145,30 @@ async def add_security_headers(request, call_next):
     return response
 
 
-# === 401 Unauthorized Exception Handler ===
+# === Static files ===
+static_dir = Path(__file__).parent / "app/static"
+static_dir.mkdir(exist_ok=True)
+fastapi_app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+# === Templates ===
+templates_dir = Path(__file__).parent / "app/templates"
+templates = Jinja2Templates(directory=str(templates_dir))
+# Share templates instance with routes module
+app.routes.templates = templates
+
+# === Healthcheck (before all routers, guaranteed available) ===
+@fastapi_app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+# === API Routes ===
+fastapi_app.include_router(api_router)
+
+# === Page Routes (HTML) ===
+fastapi_app.include_router(page_router)
+
+# === 401 Unauthorized Exception Handler ===
 
 @fastapi_app.exception_handler(HTTPException)
 async def unauthorized_exception_handler(request: Request, exc: HTTPException):
@@ -183,30 +205,6 @@ async def unauthorized_exception_handler(request: Request, exc: HTTPException):
         status_code=exc.status_code,
         content={"detail": exc.detail},
     )
-
-
-# === Static files ===
-static_dir = Path(__file__).parent / "app/static"
-static_dir.mkdir(exist_ok=True)
-fastapi_app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
-# === Templates ===
-templates_dir = Path(__file__).parent / "app/templates"
-templates = Jinja2Templates(directory=str(templates_dir))
-# Share templates instance with routes module
-app.routes.templates = templates
-
-# === Healthcheck (before all routers, guaranteed available) ===
-@fastapi_app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-
-# === API Routes ===
-fastapi_app.include_router(api_router)
-
-# === Page Routes (HTML) ===
-fastapi_app.include_router(page_router)
 
 
 @fastapi_app.get("/")

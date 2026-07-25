@@ -142,3 +142,7 @@ CORS_ORIGINS = os.getenv(
 # === Sparse Search (BM25) ===
 SPARSE_SEARCH_ENABLED = os.getenv("SPARSE_SEARCH_ENABLED", "true").lower() == "true"
 SPARSE_VECTOR_NAME = os.getenv("SPARSE_VECTOR_NAME", "bm25")
+
+
+# === Self API URL (для внутренних HTTP-вызовов к самому себе) ===
+SELF_API_URL = os.getenv("SELF_API_URL", "http://localhost:8000/api/v1")

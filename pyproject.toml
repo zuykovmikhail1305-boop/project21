@@ -75,9 +75,13 @@ dependencies = [
     "docx2pdf>=0.1.8",
     "accelerate>=1.14.0",
     "langchain-gigachat>=0.5.1",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [tool.uv.workspace]
 members = [
     "project_21",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

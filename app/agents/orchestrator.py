@@ -37,9 +37,9 @@ class AgentState(TypedDict):
 class AgentOrchestrator:
     """Оркестратор мультиагентной системы на LangGraph."""
 
-    def __init__(self, db_session=None):
+    def __init__(self, db_session=None, token: Optional[str] = None):
         self.router = RouterAgent()
-        self.search_rag = SearchRAGAgent()
+        self.search_rag = SearchRAGAgent(token=token or "")
         self.summarizer = SummarizerAgent()
         self.analytics = AnalyticsAgent()
         self.artifact_gen = ArtifactGeneratorAgent(

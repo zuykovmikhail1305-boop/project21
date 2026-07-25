@@ -4,12 +4,12 @@ import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.config import get_db
-from app.api.deps import get_current_user, get_current_user_groups
+from app.api.deps import get_current_user, get_current_user_groups, _extract_token
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage, SessionStatus
 from app.schemas.chat import (
@@ -29,11 +29,15 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 _orchestrator: Optional[AgentOrchestrator] = None
 
 
-def get_orchestrator() -> AgentOrchestrator:
-    """Get or create the agent orchestrator singleton."""
+def get_orchestrator(token: Optional[str] = None) -> AgentOrchestrator:
+    """Get or create the agent orchestrator singleton.
+
+    Args:
+        token: JWT-токен для аутентификации при self-вызове RAG API.
+    """
     global _orchestrator
     if _orchestrator is None:
-        _orchestrator = AgentOrchestrator()
+        _orchestrator = AgentOrchestrator(token=token or "")
     return _orchestrator
 
 
@@ -126,6 +130,7 @@ async def delete_session(
 
 @router.post("/stream")
 async def chat_stream(
+    http_request: Request,
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
     user_groups: list[int] = Depends(get_current_user_groups),
@@ -142,7 +147,8 @@ async def chat_stream(
         3. Stream tokens/events via SSE
         4. Save assistant response to DB
     """
-    orchestrator = get_orchestrator()
+    token = _extract_token(http_request)
+    orchestrator = get_orchestrator(token=token)
 
     # Resolve or create session
     session_id = request.session_id
@@ -265,6 +271,7 @@ async def chat_stream(
 
 @router.post("/chat")
 async def chat_sync(
+    http_request: Request,
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
     user_groups: list[int] = Depends(get_current_user_groups),
@@ -274,7 +281,8 @@ async def chat_sync(
 
     Returns the full response at once. Useful for testing or simple integrations.
     """
-    orchestrator = get_orchestrator()
+    token = _extract_token(http_request)
+    orchestrator = get_orchestrator(token=token)
 
     # Resolve or create session
     session_id = request.session_id

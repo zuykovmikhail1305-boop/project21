@@ -1,21 +1,27 @@
-from openai import OpenAI
+"""RAG Agent: использует GigaChat для генерации ответов на основе контекста."""
+
+from langchain_gigachat.chat_models import GigaChat
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
 class Agent:
     def __init__(self, max_context_messages=20):
-        # Чтение переменных окружения с преобразованием типов и значениями по умолчанию
-        self.agent_api = os.getenv("AGENT_API", "http://localhost:1234/v1")
-        self.agent_model = os.getenv("AGENT_MODEL", "qwen2.5-coder-7b-instruct")
+        # Конфиг Agent
         self.agent_temperature = float(os.getenv("AGENT_TEMPERATURE", "0.1"))
         self.agent_max_tokens = int(os.getenv("AGENT_MAX_TOKEN", "8192"))
 
-        self.client = OpenAI(
-            base_url=self.agent_api,
-            api_key="util"
+        # Инициализируем GigaChat клиент через LangChain
+        self.client = GigaChat(
+            credentials=os.getenv("GIGACHAT_CREDENTIALS", ""),
+            model="GigaChat-2",
+            temperature=self.agent_temperature,
+            max_tokens=self.agent_max_tokens,
+            verify_ssl_certs=False
         )
+
         self.max_context_messages = max_context_messages
         self.system_prompt = """Ты — точный и полезный ассистент, который отвечает на вопросы, используя только информацию из предоставленного контекста.
 Ты никогда не полагаешься на свои собственные знания или обучающие данные, если контекст явно их не подтверждает.
@@ -74,14 +80,10 @@ class Agent:
 
         self._trim_history()
 
-        response = self.client.chat.completions.create(
-            model=self.agent_model,
-            messages=self.messages,
-            temperature=self.agent_temperature,
-            max_tokens=self.agent_max_tokens,
-        )
+        # Используем GigaChat через LangChain
+        response = self.client.invoke(self.messages)
+        assistant_reply = response.content
 
-        assistant_reply = response.choices[0].message.content
         self.messages.append({"role": "assistant", "content": assistant_reply})
         self.last_context = sources
 
@@ -97,16 +99,3 @@ class Agent:
         if len(history) > max_history_msgs:
             history = history[-max_history_msgs:]
         self.messages = [system_msg] + history
-
-    def clear_memory(self):
-        self.messages = [{"role": "system", "content": self.system_prompt}]
-
-    def print_sources(self, sources):
-        if not sources:
-            print("Нет источников.")
-            return
-        print("\n--- Использованные источники ---")
-        for i, src in enumerate(sources, 1):
-            print(f"{i}. Файл: {src.get('filename', 'неизвестно')}, стр. {src.get('page', 'неизвестно')}")
-            print(f"   Текст: {src['text']}...")
-        print("--------------------------------\n")

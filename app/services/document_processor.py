@@ -1,3 +1,5 @@
+"""Document Processor: парсинг и чанкинг документов."""
+
 from unstructured.partition.auto import partition
 from unstructured.cleaners.core import clean_extra_whitespace
 from llama_index.core import Document
@@ -10,10 +12,11 @@ import os
 import tempfile
 from docx2pdf import convert
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
-class Processing():
+class Processing:
     def __init__(self, doc_path):
         self.original_path = doc_path
         self.pdf_path = None
@@ -98,27 +101,27 @@ class Processing():
 
         parsed_elements = self.parsing()
         if not parsed_elements:
-            return []
+            raise ValueError("Не удалось получить элементы из файла")
 
-        common_metadata = {
-            k: v for k, v in parsed_elements[0]['metadata'].items()
-            if k != 'page_number'
-        }
+        # Группируем элементы по странице для сохранения контекста
+        pages = defaultdict(list)
+        for element in parsed_elements:
+            page_num = element["metadata"].get("page_number", 0)
+            pages[page_num].append(element)
 
-        pages = defaultdict(str)
-        for el in parsed_elements:
-            page = el['metadata'].get('page_number', 'unknown')
-            if page is None:
-                page = 'unknown'
-            pages[str(page)] += el['text'] + '\n\n'
+        # Объединяем элементы на странице в один документ
+        documents = []
+        for page_num in sorted(pages.keys()):
+            elements = pages[page_num]
+            combined_text = "\n\n".join([e["text"] for e in elements])
+            metadata = {
+                "page_number": page_num,
+                "filename": elements[0]["metadata"].get("filename", "unknown"),
+                "filetype": elements[0]["metadata"].get("filetype", "unknown"),
+            }
+            doc = Document(text=combined_text, metadata=metadata)
+            documents.append(doc)
 
-        all_nodes = []
-        for page, text in pages.items():
-            doc = Document(
-                text=text,
-                metadata={**common_metadata, 'page_number': page}
-            )
-            nodes = splitter.get_nodes_from_documents([doc])
-            all_nodes.extend(nodes)
-
-        return all_nodes
+        # Применяем чанкинг
+        nodes = splitter.get_nodes_from_documents(documents)
+        return nodes

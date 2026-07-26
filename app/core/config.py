@@ -1,3 +1,5 @@
+import binascii
+import base64
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -5,10 +7,10 @@ import os
 
 load_dotenv('.env')
 
-# === PostgreSQL ===
+# === SQLite ===
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/project21"
+    "sqlite:///./project21.db"
 )
 
 engine = None
@@ -22,7 +24,9 @@ def _build_engine():
         return engine, SessionLocal
 
     try:
-        engine = create_engine(DATABASE_URL)
+        # SQLite требует connect_args для потокобезопасности
+        connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+        engine = create_engine(DATABASE_URL, connect_args=connect_args)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     except Exception:
         engine = None
@@ -87,8 +91,6 @@ GIGACHAT_API_URL = os.getenv("GIGACHAT_API_URL", "https://api.giga.chat/v1")
 GIGACHAT_MODEL = os.getenv("GIGACHAT_MODEL", "GigaChat-2")
 # Credentials для SDK: если GIGACHAT_CLIENT_SECRET уже является Base64 (Authorization Key),
 # используем его напрямую. Иначе формируем Base64 из client_id|client_secret.
-import base64
-import binascii
 _GIGACHAT_CREDENTIALS_ENV = os.getenv("GIGACHAT_CREDENTIALS", "")
 if _GIGACHAT_CREDENTIALS_ENV:
     GIGACHAT_CREDENTIALS = _GIGACHAT_CREDENTIALS_ENV
@@ -124,7 +126,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 # === Storage (local files for MVP) ===
 LOCAL_STORAGE_PATH = os.getenv("LOCAL_STORAGE_PATH", "./storage")
 
-### === Hugging Face Token ===
+# === Hugging Face Token ===
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 
 

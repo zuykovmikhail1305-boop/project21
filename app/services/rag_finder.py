@@ -1,10 +1,13 @@
-from openai import OpenAI
-from embending import Embedding
-from bm25_search import BM25Search
+"""RAG Finder: гибридный поиск (HyDE + BM25 + Dense + Reranking) с использованием GigaChat."""
+
+from langchain_gigachat.chat_models import GigaChat
+from app.services.rag_embedder import Embedding
+from app.services.bm25_searcher import BM25Search
+from app.services.document_processor import Processing
 from sentence_transformers import CrossEncoder
-from processing import Processing
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -16,9 +19,7 @@ class Find_answer:
         self.bm25 = bm25_index
         self.history = history if history is not None else []
 
-        # Чтение переменных окружения с преобразованием типов и значениями по умолчанию
-        self.hyde_api = os.getenv("HYDE_API", "http://localhost:1234/v1")
-        self.hyde_model = os.getenv("HYDE_MODEL", "qwen2.5-coder-7b-instruct")
+        # Конфиг для HyDE
         self.hyde_temperature = float(os.getenv("HYDE_TEMPERATURE", "0.7"))
         self.hyde_max_tokens = int(os.getenv("HYDE_MAX_TOKEN", "2048"))
 
@@ -28,9 +29,13 @@ class Find_answer:
         self.limit_rrf = int(os.getenv("LIMIT_RRF", "10"))
         self.cross_encoder_model = os.getenv("CROSS_ENC", "cross-encoder/ms-marco-MiniLM-L-6-v2")
 
-        self.client = OpenAI(
-            base_url=self.hyde_api,
-            api_key="lm-studio"
+        # Используем GigaChat для HyDE генерации
+        self.client = GigaChat(
+            credentials=os.getenv("GIGACHAT_CREDENTIALS", ""),
+            model="GigaChat-2",
+            temperature=self.hyde_temperature,
+            max_tokens=self.hyde_max_tokens,
+            verify_ssl_certs=False
         )
 
     def _format_history(self):
@@ -58,16 +63,12 @@ class Find_answer:
 Не добавляй вводных фраз, пояснений или мета-комментариев. Выведи только текст гипотетического документа.
 Не учитывай к каком году ты был обучен, если пользователь просит найти документы из года, в котором ты не был ещё обучен, то просто придумывай создавай документ с учётом года пользователя.
 Если запрос является уточнением, постарайся включить в документ информацию, связывающую его с предыдущим контекстом."""
-        response = self.client.chat.completions.create(
-            model=self.hyde_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ],
-            temperature=self.hyde_temperature,
-            max_tokens=self.hyde_max_tokens,
-        )
-        return response.choices[0].message.content
+
+        response = self.client.invoke([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ])
+        return response.content
 
     def _rrf_fusion_general(self, results_lists, limit=None, k=60):
         """

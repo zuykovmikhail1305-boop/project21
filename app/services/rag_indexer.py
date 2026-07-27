@@ -1,23 +1,26 @@
+"""RAG Indexer: индексация документов в Qdrant и BM25."""
+
 import os
 import pickle
 import glob
-from processing import Processing
-from embending import Embedding
-from bm25_search import BM25Search
-import os
+from app.services.document_processor import Processing
+from app.services.rag_embedder import Embedding
+from app.services.bm25_searcher import BM25Search
 from dotenv import load_dotenv
+
 load_dotenv()
 
+
 def create_index(
-    folder_path="test",
-    collection_name="my_docs",
-    index_file="bm25_index.pkl",
+    folder_path=os.getenv("FILE_PATH"),
+    collection_name=os.getenv("QDRANT_COLLECTION"),
+    index_file=os.getenv("INDEX_PATH"),
     recreate=False,
-    chunking_threshold=75
+    chunking_threshold=os.getenv("CHUNK_THRESHOLD", 75)
 ):
     """
     Создаёт коллекцию в Qdrant и BM25 индекс для всех документов в папке.
-    
+
     :param folder_path: путь к папке с документами
     :param collection_name: имя коллекции в Qdrant
     :param index_file: файл для сохранения BM25 индекса
@@ -44,8 +47,7 @@ def create_index(
         print(f"🔄 Обработка: {os.path.basename(file_path)}")
         try:
             p = Processing(file_path)
-            # Передаём порог для чанкинга (если метод chunking принимает threshold)
-            chunks = p.chunking()  # если нужно, можно добавить параметр threshold
+            chunks = p.chunking()
             if chunks:
                 all_chunks.extend(chunks)
                 print(f"   → Добавлено {len(chunks)} чанков")
@@ -94,8 +96,3 @@ def create_index(
     print(f"   - BM25 индекс: {len(all_chunks)} документов")
 
     return bm25
-
-if __name__ == "__main__":
-    # Пример использования
-    # Если вы хотите пересоздать индексы с нуля, установите recreate=True
-    create_index(folder_path="test", recreate=False)

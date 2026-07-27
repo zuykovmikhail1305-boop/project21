@@ -1,8 +1,11 @@
+"""RAG Embedder: работа с векторными эмбеддингами и Qdrant."""
+
 import requests
 import uuid
 from sentence_transformers import SentenceTransformer
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -98,39 +101,3 @@ class Embedding:
             print(f"⚠️ Коллекция '{collection_name}' не найдена, ничего не делаем.")
         else:
             raise Exception(f"Ошибка при удалении коллекции: {resp.text}")
-
-    def clear_points(self, collection_name=None, batch_size=64):
-        if collection_name is None:
-            collection_name = self.collection_name
-
-        collection_url = f"{self.qdrant_url}/collections/{collection_name}"
-        resp = requests.get(collection_url)
-        if resp.status_code == 404:
-            print(f"⚠️ Коллекция '{collection_name}' не существует. Ничего не удаляем.")
-            return
-        elif resp.status_code != 200:
-            raise Exception(f"Не удалось получить информацию о коллекции: {resp.text}")
-
-        scroll_url = f"{collection_url}/points/scroll"
-        scroll_payload = {"limit": batch_size, "with_payload": False}
-        points_deleted = 0
-        while True:
-            resp = requests.post(scroll_url, json=scroll_payload)
-            if resp.status_code != 200:
-                raise Exception(f"Ошибка при получении точек: {resp.text}")
-            data = resp.json()
-            result = data.get("result", {})
-            points = result.get("points", [])
-            if not points:
-                break
-            point_ids = [p["id"] for p in points]
-            delete_payload = {"points": point_ids}
-            delete_resp = requests.post(f"{collection_url}/points/delete", json=delete_payload)
-            if delete_resp.status_code != 200:
-                raise Exception(f"Ошибка при удалении точек: {delete_resp.text}")
-            points_deleted += len(point_ids)
-            scroll_payload["offset"] = result.get("next_page_offset")
-            if not scroll_payload["offset"]:
-                break
-            print(f"Удалено {points_deleted} точек...")
-        print(f"✅ Все точки удалены. Всего удалено: {points_deleted}")

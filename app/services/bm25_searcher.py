@@ -1,9 +1,12 @@
-# bm25_search.py
+"""BM25 Search: индексирование и поиск с использованием BM25."""
+
 from rank_bm25 import BM25Okapi
 import re
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
+
 
 class BM25Search:
     def __init__(self):
@@ -40,8 +43,8 @@ class BM25Search:
                 "id": f"bm25_{idx}"  # уникальный идентификатор
             })
         return results
-    
 
+    @staticmethod
     def delete_bm25_index(index_file="bm25_index.pkl"):
         """Удаляет файл с сохранённым BM25 индексом."""
         if os.path.exists(index_file):

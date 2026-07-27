@@ -8,6 +8,7 @@ from app.services.rag_embedder import Embedding
 from app.services.bm25_searcher import BM25Search
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 

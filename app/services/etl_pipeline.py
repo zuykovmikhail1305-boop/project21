@@ -45,7 +45,7 @@ def process_document(document_id: int) -> None:
         logger.info(f"=== ETL DEBUG: Creating GigaChatRAGService...")
         rag_service = GigaChatRAGService()
         logger.info(f"=== ETL DEBUG: Calling index_document with filepath={doc.filepath}, document_id={document_id}")
-        points = rag_service.index_document(
+        points = rag_service.index_document(           #TODO Всатавить свой
             file_path=str(doc.filepath),
             document_id=document_id,
             db=db,

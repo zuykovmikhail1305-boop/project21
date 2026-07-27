@@ -62,7 +62,7 @@ async def upload_document(
     db: Session = Depends(get_db),
 ):
     """Загрузить документ."""
-    import logging
+    import logging 
     logger = logging.getLogger(__name__)
     logger.info("=== UPLOAD DEBUG ===")
     logger.info(f"Filename: {file.filename}")
@@ -112,7 +112,7 @@ async def upload_document(
 
 def process_document_background(document_id: int):
     """Фоновая задача: запуск ETL пайплайна."""
-    from app.services.etl_pipeline import process_document
+    from app.services.etl_pipeline import process_document #Сюда вставить мой процесс
     process_document(document_id)
 
 

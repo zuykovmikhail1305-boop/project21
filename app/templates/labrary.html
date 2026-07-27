@@ -4,7 +4,11 @@
 
 {% block extra_head %}
 <style>
-    /* Library page specific styles — reserved for future overrides */
+    /* Library page specific styles */
+    .upload-overlay {
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(8px);
+    }
 </style>
 {% endblock %}
 
@@ -31,6 +35,10 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
+                <button class="flex items-center gap-3 px-6 py-3.5 bg-primary text-on-primary rounded-xl hover:shadow-lg transition-all active:scale-95 duration-150 group" id="upload-btn-main">
+                    <span class="material-symbols-outlined transition-transform group-hover:rotate-180">upload</span>
+                    <span class="font-bold uppercase tracking-wider">Загрузить</span>
+                </button>
                 <button class="bg-white/80 border border-outline-variant/20 text-on-surface px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-primary hover:text-on-primary transition-all duration-300 shadow-sm">
                     <span class="material-symbols-outlined text-lg">upload_file</span>
                     Пакетная загрузка
@@ -38,21 +46,53 @@
             </div>
         </header>
 
-        <!-- Sophisticated Filter Bar -->
-        <div class="deep-glass p-2 rounded-3xl flex flex-col lg:flex-row items-center gap-4 mb-12 border border-white/50 animate-fade-in-up" style="animation-delay: 0.1s">
-            <div class="relative flex-1 w-full lg:w-auto">
-                <span class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-primary/60">auto_awesome</span>
-                <input class="w-full bg-transparent border-none pl-14 pr-4 py-4 text-on-surface focus:ring-0 placeholder:text-outline/40 font-medium" placeholder="Поиск по базе знаний..." type="text">
+        <!-- Floating Upload Area (Hidden Initially) -->
+        <div class="hidden fixed inset-0 z-50 flex items-center justify-center p-6 upload-overlay" id="upload-overlay">
+            <div class="deep-glass w-full max-w-2xl p-8 rounded-3xl shadow-lg animate-scale-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-headline-sm font-bold text-on-surface">Загрузка документов</h2>
+                    <button class="material-symbols-outlined p-2 hover:bg-surface-container rounded-full text-on-surface-variant" id="close-upload">close</button>
+                </div>
+                <form id="upload-form" enctype="multipart/form-data" class="space-y-6">
+                    <div class="border-2 border-dashed border-outline-variant/40 rounded-2xl p-12 text-center hover:border-primary transition-all group cursor-pointer" id="drop-zone">
+                        <div class="w-16 h-16 bg-primary-container/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary-container/20 transition-colors">
+                            <span class="material-symbols-outlined text-primary text-3xl">cloud_upload</span>
+                        </div>
+                        <p class="text-body-lg font-medium text-on-surface">Перетащите файл или <span class="text-primary underline">выберите на компьютере</span></p>
+                        <p class="text-caption text-on-surface-variant mt-2">PDF, DOCX, XLSX, TXT (макс. 50 MB)</p>
+                        <input class="hidden" type="file" name="file" id="file-input" accept=".pdf,.docx,.xlsx,.txt"/>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button type="submit" class="px-8 py-3.5 bg-primary text-on-primary rounded-xl font-bold hover:shadow-glow transition-all active:scale-95">
+                            <span id="upload-btn-text">Запустить</span>
+                            <span id="upload-btn-spinner" class="hidden">
+                                <svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                            </span>
+                        </button>
+                        <div id="upload-error" class="hidden text-error text-body-sm"></div>
+                    </div>
+                </form>
             </div>
-            <div class="h-10 w-px bg-outline-variant/20 hidden lg:block"></div>
-            <div class="flex items-center gap-2 p-1">
-                <button class="px-6 py-2.5 bg-primary text-on-primary rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-primary/20">Все</button>
-                <button class="px-6 py-2.5 hover:bg-white/50 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-all">Документы</button>
-                <button class="px-6 py-2.5 hover:bg-white/50 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-all">Медиа</button>
-                <button class="px-6 py-2.5 hover:bg-white/50 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-all">Система</button>
-                <div class="w-px h-8 bg-outline-variant/10 mx-2"></div>
-                <button class="p-3 hover:bg-white/50 rounded-full text-on-surface-variant transition-all">
-                    <span class="material-symbols-outlined text-xl">tune</span>
+        </div>
+
+        <!-- Filters & Search Toolbar -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s">
+            <div class="relative flex-1 group">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/60 group-focus-within:text-primary transition-colors">search</span>
+                <input class="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest text-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-surface transition-all shadow-sm" id="doc-search" placeholder="Поиск документов по названию или метаданным..." type="text"/>
+            </div>
+            <div class="flex gap-3">
+                <select class="px-4 py-3.5 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest text-body-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer" id="status-filter">
+                    <option value="">Все статусы</option>
+                    <option value="ready">Готово</option>
+                    <option value="processing">В обработке</option>
+                    <option value="error">Ошибка</option>
+                </select>
+                <button class="p-3.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-all">
+                    <span class="material-symbols-outlined">filter_list</span>
                 </button>
             </div>
         </div>
@@ -65,7 +105,8 @@
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {% for doc in documents %}
-                <div class="action-card p-6 rounded-[2.5rem] cursor-pointer group" style="animation-delay: {{ 0.3 + loop.index0 * 0.1 }}s">
+                <div class="doc-card action-card p-6 rounded-[2.5rem] cursor-pointer group" style="animation-delay: {{ 0.3 + loop.index0 * 0.1 }}s"
+                     onclick="window.location.href='/documents/{{ doc.id }}'">
                     <div class="w-full h-44 bg-surface-container-low/30 rounded-3xl mb-6 flex items-center justify-center relative overflow-hidden">
                         <span class="material-symbols-outlined text-6xl text-primary/20 group-hover:scale-125 transition-transform duration-700 ease-out">
                             {% if doc.filename.endswith('.pdf') %}picture_as_pdf
@@ -80,12 +121,29 @@
                         <span class="text-[10px] text-on-surface-variant font-label font-bold uppercase tracking-tighter">{{ doc.mime_type or 'Документ' }}</span>
                         <span class="text-[9px] text-outline font-label font-bold uppercase">{{ doc.created_at.strftime('%d.%m.%Y') if doc.created_at else '' }}</span>
                     </div>
+                    <!-- Status Badge -->
+                    <div class="mt-2 px-1">
+                        {% set status = doc.status.value if doc.status else 'pending' %}
+                        {% if status == 'ready' %}
+                        <span class="status-badge bg-primary/10 text-primary text-[10px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-md">READY</span>
+                        {% elif status == 'processing' %}
+                        <span class="status-badge bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
+                            PROCESSING
+                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse inline-block"></span>
+                        </span>
+                        {% elif status == 'error' %}
+                        <span class="status-badge bg-error-container text-error text-[10px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-md">ERROR</span>
+                        {% else %}
+                        <span class="status-badge bg-surface-container-high text-on-surface-variant text-[10px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-md">{{ status|upper }}</span>
+                        {% endif %}
+                    </div>
                 </div>
                 {% else %}
-                <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                <div class="col-span-full flex flex-col items-center justify-center py-16 text-center" id="no-results">
                     <span class="material-symbols-outlined text-icon-lg text-on-surface-variant/20 mb-4" aria-hidden="true">folder_open</span>
                     <p class="text-body-md text-on-surface-variant/60">Нет загруженных документов</p>
                     <p class="text-body-sm text-on-surface-variant/40 mt-1">Загрузите первый документ, чтобы начать работу</p>
+                    <button class="mt-6 px-6 py-3 bg-primary text-on-primary rounded-xl font-bold hover:shadow-lg transition-all" id="upload-from-empty">Загрузить документ</button>
                 </div>
                 {% endfor %}
             </div>
@@ -193,5 +251,159 @@
             container.classList.remove('emerald-protocol-glow');
         });
     });
+
+    // ===================== Upload Overlay =====================
+    const uploadBtn = document.getElementById('upload-btn-main');
+    const uploadOverlay = document.getElementById('upload-overlay');
+    const closeUpload = document.getElementById('close-upload');
+    const uploadFromEmpty = document.getElementById('upload-from-empty');
+
+    function openUpload() {
+        uploadOverlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeUploadFn() {
+        uploadOverlay.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    uploadBtn?.addEventListener('click', openUpload);
+    closeUpload?.addEventListener('click', closeUploadFn);
+    uploadFromEmpty?.addEventListener('click', openUpload);
+
+    // Click outside overlay to close
+    uploadOverlay?.addEventListener('click', (e) => {
+        if (e.target === uploadOverlay) closeUploadFn();
+    });
+
+    // Upload form elements
+    const uploadForm = document.getElementById('upload-form');
+    const fileInput = document.getElementById('file-input');
+    const uploadBtnText = document.getElementById('upload-btn-text');
+    const uploadBtnSpinner = document.getElementById('upload-btn-spinner');
+    const uploadError = document.getElementById('upload-error');
+
+    // Click drop zone to open file picker
+    const dropZone = document.getElementById('drop-zone');
+
+    dropZone?.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Show selected filename in drop zone
+    fileInput?.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const fileName = fileInput.files[0].name;
+            const label = dropZone.querySelector('p.text-body-lg');
+            if (label) {
+                label.innerHTML = `<span class="text-primary">${fileName}</span>`;
+            }
+        }
+    });
+
+    // Drag and drop support
+    dropZone?.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-primary', 'bg-primary/5');
+    });
+
+    dropZone?.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-primary', 'bg-primary/5');
+    });
+
+    dropZone?.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-primary', 'bg-primary/5');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            const fileName = e.dataTransfer.files[0].name;
+            const label = dropZone.querySelector('p.text-body-lg');
+            if (label) {
+                label.innerHTML = `<span class="text-primary">${fileName}</span>`;
+            }
+        }
+    });
+
+    uploadForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        uploadError.classList.add('hidden');
+
+        const file = fileInput.files[0];
+        if (!file) {
+            uploadError.textContent = 'Выберите файл для загрузки';
+            uploadError.classList.remove('hidden');
+            return;
+        }
+
+        uploadBtnText.classList.add('hidden');
+        uploadBtnSpinner.classList.remove('hidden');
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const token = localStorage.getItem('access_token');
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch('/api/v1/documents/upload', {
+                method: 'POST',
+                headers: headers,
+                body: formData,
+            });
+
+            if (response.ok) {
+                closeUploadFn();
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                uploadError.textContent = data.detail || 'Ошибка загрузки файла';
+                uploadError.classList.remove('hidden');
+            }
+        } catch (err) {
+            uploadError.textContent = 'Ошибка соединения с сервером';
+            uploadError.classList.remove('hidden');
+        } finally {
+            uploadBtnText.classList.remove('hidden');
+            uploadBtnSpinner.classList.add('hidden');
+        }
+    });
+
+    // ===================== Search and Filter Logic =====================
+    const searchInput = document.getElementById('doc-search');
+    const statusFilter = document.getElementById('status-filter');
+    const cards = document.querySelectorAll('.doc-card');
+    const noResults = document.getElementById('no-results');
+
+    function filterDocs() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const filterValue = statusFilter.value.toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const title = card.querySelector('h4').textContent.toLowerCase();
+            const badge = card.querySelector('.status-badge').textContent.toLowerCase();
+
+            const matchesSearch = title.includes(searchTerm);
+            const matchesFilter = filterValue === "" || badge.includes(filterValue);
+
+            if (matchesSearch && matchesFilter) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (visibleCount === 0) {
+            noResults?.classList.remove('hidden');
+        } else {
+            noResults?.classList.add('hidden');
+        }
+    }
+
+    searchInput?.addEventListener('input', filterDocs);
+    statusFilter?.addEventListener('change', filterDocs);
 </script>
 {% endblock %}

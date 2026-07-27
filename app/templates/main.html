@@ -53,42 +53,30 @@
             </div>
 
             <!-- Quick Actions -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-fade-in-up" style="animation-delay: 0.4s">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-fade-in-up" style="animation-delay: 0.4s">
                 <div class="group relative">
-                    <a href="/chat?q=Создай отчет по " class="block w-full p-5 deep-glass rounded-2xl action-card flex flex-col items-center gap-3 text-center border border-white/40 no-underline">
-                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-1">
-                            <span class="material-symbols-outlined text-3xl">analytics</span>
+                    <button type="button" class="quick-action-btn block w-full p-3 deep-glass rounded-xl action-card flex flex-col items-center gap-1.5 text-center border border-white/40 no-underline cursor-pointer" data-prompt="Создай отчет по ">
+                        <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-xl">analytics</span>
                         </div>
-                        <span class="text-sm font-bold text-on-surface">Создать отчет</span>
-                    </a>
-                    <div class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-64 p-4 deep-glass rounded-xl text-xs text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
+                        <span class="text-xs font-bold text-on-surface">Создать отчет</span>
+                    </button>
+                    <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 deep-glass rounded-xl text-[11px] text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
                         <div class="font-bold text-primary mb-1">Аналитический модуль</div>
                         Генерация структурированных отчетов на основе корпоративных данных с использованием нейросетевых моделей.
                     </div>
                 </div>
                 <div class="group relative">
-                    <a href="/chat?q=Найди информацию о " class="block w-full p-5 deep-glass rounded-2xl action-card flex flex-col items-center gap-3 text-center border border-white/40 no-underline">
-                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-1">
-                            <span class="material-symbols-outlined text-3xl">manage_search</span>
+                    <button type="button" class="quick-action-btn block w-full p-3 deep-glass rounded-xl action-card flex flex-col items-center gap-1.5 text-center border border-white/40 no-underline cursor-pointer" data-prompt="Найди информацию о ">
+                        <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-xl">manage_search</span>
                         </div>
-                        <span class="text-sm font-bold text-on-surface">Поиск в базе</span>
-                    </a>
-                    <div class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-64 p-4 deep-glass rounded-xl text-xs text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
+                        <span class="text-xs font-bold text-on-surface">Поиск в базе</span>
+                    </button>
+                    <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 deep-glass rounded-xl text-[11px] text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
                         <div class="font-bold text-primary mb-1">Умный поиск</div>
                         Семантический поиск по всем загруженным документам, PDF-файлам и внутренним регламентам компании.
                     </div>
-                </div>
-                {{/* <div class="group relative">
-                    <a href="/chat?q=Настрой ассистента для работы с документами" class="block w-full p-5 deep-glass rounded-2xl action-card flex flex-col items-center gap-3 text-center border border-white/40 no-underline">
-                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-1">
-                            <span class="material-symbols-outlined text-3xl">psychology_alt</span>
-                        </div>
-                        <span class="text-sm font-bold text-on-surface">Настроить ИИ</span>
-                    </a>
-                    <div class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-64 p-4 deep-glass rounded-xl text-xs text-on-surface-variant opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50 shadow-2xl">
-                        <div class="font-bold text-primary mb-1">Кастомизация агента</div>
-                        Редактирование системных промптов и навыков ассистента для решения узкоспециализированных бизнес-задач.
-                    </div> */}}
                 </div>
             </div>
         </form>
@@ -153,5 +141,21 @@
             }
         });
     }
+
+    // Quick Action Buttons — insert text into search input instead of navigating
+    document.querySelectorAll('.quick-action-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const prompt = this.dataset.prompt || '';
+            const input = document.querySelector('input[name="q"]');
+            if (input) {
+                input.value = prompt;
+                input.focus();
+                // Move cursor to end of input
+                const len = input.value.length;
+                input.setSelectionRange(len, len);
+            }
+        });
+    });
 </script>
 {% endblock %}

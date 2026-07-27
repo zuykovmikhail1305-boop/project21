@@ -106,31 +106,6 @@ async def projects_page(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/documents", response_class=HTMLResponse, include_in_schema=False)
-async def documents_page(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Documents management page."""
-    documents = (
-        db.query(Document)
-        .order_by(Document.created_at.desc())
-        .limit(50)
-        .all()
-    )
-    tmpl = get_templates()
-    return tmpl.TemplateResponse(
-        name="documents.html",
-        request=request,
-        context={
-            "request": request,
-            "active_page": "documents",
-            "documents": documents,
-        },
-    )
-
-
 @router.get("/documents/{doc_id}", response_class=HTMLResponse, include_in_schema=False)
 async def document_view_page(
     request: Request,
@@ -142,7 +117,7 @@ async def document_view_page(
 
     document = db.query(Document).filter(Document.id == doc_id).first()
     if not document:
-        return RedirectResponse(url="/documents")
+        return RedirectResponse(url="/library")
 
     chunks = document.chunks
     tmpl = get_templates()

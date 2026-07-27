@@ -28,7 +28,7 @@ class Processing():
         convert(docx_path, pdf_path)
         return pdf_path
 
-    def parsing(self):
+    def parsing(self, document_id):
         if not os.path.exists(self.original_path):
             raise FileNotFoundError(f"Файл не найден: {self.original_path}")
 
@@ -57,7 +57,7 @@ class Processing():
             element_data = {
                 "category": el.category,
                 "text": clean_text,
-                "metadata": {
+                "metadata": { 
                     "page_number": el.metadata.page_number if el.metadata.page_number else None,
                     "filename": el.metadata.filename if hasattr(el.metadata, 'filename') else None,
                     "filetype": el.metadata.filetype if hasattr(el.metadata, 'filetype') else None,

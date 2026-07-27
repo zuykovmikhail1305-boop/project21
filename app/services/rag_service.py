@@ -14,15 +14,19 @@ from app.services.gigachat_provider import GigaChatClient
 from app.services.reranker import Reranker
 from app.services.vector_store import VectorStore
 
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 
 class GigaChatRAGService:
     """RAG-пайплайн, сохраняющий идею RAG_Misha и использующий GigaChat."""
 
     def __init__(
         self,
-        vector_store: Optional[VectorStore] = None,
-        embedder: Optional[EmbedderService] = None,
-        reranker: Optional[Reranker] = None,
+        vector_store: Optional[VectorStore] = os.getenv('QDRANT_COLLECTION_NAME'),
+        embedder: Optional[EmbedderService] = os.getenv('EMB_MODEL'),
+        reranker: Optional[Reranker] = os.getenv('CROSS_ENC'),
     ):
         self.vector_store = vector_store or VectorStore()
         self.embedder = embedder or EmbedderService()
@@ -62,7 +66,7 @@ class GigaChatRAGService:
         query: str,
         history: Optional[list[dict]] = None,
         split_chunks: bool = True,
-        max_chunks: int = 5,
+        max_chunks: int = int(os.getenv('MAX_CHUNK_HYDE')),
     ) -> list[str]:
         """Генерация HyDE с разбиением на чанки для множественного поиска.
 
@@ -103,7 +107,9 @@ class GigaChatRAGService:
             # Асинхронный вызов LLM
             hyde_text = await self.llm._generate_text(
                 prompt=prompt,
-                system_prompt="Ты генерируешь гипотетический документ для поиска."
+                system_prompt="Ты генерируешь гипотетический документ для поиска.",
+                temperature= float(os.getenv('HYDE_TEMPERATURE')),
+                max_tokens= int(os.getenv('HYDE_MAX_TOKEN'))
             )
 
         logger.info("[TIMING] generate_hyde() took %.2fs", time.time() - t0)
@@ -115,7 +121,7 @@ class GigaChatRAGService:
     @staticmethod
     def _rrf_fusion(
         results_lists: list[list[dict]],
-        limit: int = 10,
+        limit: int = int(os.getenv('LIMIT_RRF')),
         k: int = 60,
     ) -> list[dict]:
         """Обобщённый RRF для любого числа списков результатов.
@@ -186,7 +192,7 @@ class GigaChatRAGService:
             raise
 
     @staticmethod
-    def _split_hyde(hyde_text: str, max_chunks: int = 5) -> list[str]:
+    def _split_hyde(hyde_text: str, max_chunks: int = int(os.getenv('MAX_CHUNK_HYDE'))) -> list[str]:
         """Разбить HyDE-документ на чанки для множественного поиска.
 
         Перенесено из RAG_Misha/find.py:119-124.
@@ -430,6 +436,10 @@ class GigaChatRAGService:
         if not nodes:
             logger.warning("=== RAG DEBUG: No nodes returned from chunking, returning empty")
             return []
+        
+        from RAG_Misha.embending import Embedding
+        emb = Embedding()
+        emb.save_to_qdrant(nodes)
 
         points = []
         for index, node in enumerate(nodes):
@@ -439,6 +449,8 @@ class GigaChatRAGService:
                 continue
 
             logger.info(f"=== RAG DEBUG: Embedding chunk {index}/{len(nodes)} (len={len(chunk_text)})")
+            
+            emb = Embedding()
             embedding = self.embedder.embed(chunk_text)
             point_id = str(uuid.uuid4())
 
@@ -477,7 +489,7 @@ class GigaChatRAGService:
         self,
         query: str,
         user_groups: list[int],
-        top_k: int = 5,
+        top_k: int = os.getenv('TOP_RERANKED'),
         history: Optional[list[dict]] = None,
     ) -> dict:
         """Сформировать ответ на основании найденных чанков.

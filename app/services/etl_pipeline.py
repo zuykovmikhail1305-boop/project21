@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 from sqlalchemy.orm import Session
 
+
 from app.core.config import get_db, QDRANT_COLLECTION_NAME
 from app.core.dependencies import get_qdrant_client, get_embedder
 from app.crud.crud_document import (
@@ -17,6 +18,7 @@ from app.models.document import DocumentStatus
 from app.services.rag_service import GigaChatRAGService
 
 logger = logging.getLogger(__name__)
+
 
 
 def process_document(document_id: int) -> None:

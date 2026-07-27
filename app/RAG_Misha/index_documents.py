@@ -9,11 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def create_index(
-    folder_path="test",
-    collection_name="my_docs",
-    index_file="bm25_index.pkl",
+    folder_path=os.getenv("FILE_PATH"),
+    collection_name=os.getenv("QDRANT_COLLECTION"),
+    index_file=os.getenv("INDEX_PATH"),
     recreate=False,
-    chunking_threshold=75
+    chunking_threshold=os.getenv("CHUNK_THRESHOLD", 75)
 ):
     """
     Создаёт коллекцию в Qdrant и BM25 индекс для всех документов в папке.

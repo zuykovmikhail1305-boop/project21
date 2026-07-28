@@ -5,14 +5,16 @@ import logging
 from typing import Optional
 
 from app.core import config
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class EmbedderService:
     """Генерация эмбеддингов для текстов."""
 
     def __init__(
         self,
-        model_name: str = "all-MiniLM-L6-v2",
+        model_name: str = str(os.getenv('EMB_MODEL')),
         device: str = "cpu",
         provider: Optional[object] = None,
     ):

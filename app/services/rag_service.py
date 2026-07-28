@@ -24,9 +24,9 @@ class GigaChatRAGService:
 
     def __init__(
         self,
-        vector_store: Optional[VectorStore] = os.getenv('QDRANT_COLLECTION_NAME'),
-        embedder: Optional[EmbedderService] = os.getenv('EMB_MODEL'),
-        reranker: Optional[Reranker] = os.getenv('CROSS_ENC'),
+        vector_store: Optional[VectorStore] = None,
+        embedder: Optional[EmbedderService] = None,
+        reranker: Optional[Reranker] = None,
     ):
         self.vector_store = vector_store or VectorStore()
         self.embedder = embedder or EmbedderService()
@@ -422,7 +422,7 @@ class GigaChatRAGService:
 
         try:
             logger.info("=== RAG DEBUG: Importing RAG_Misha.processing.Processing...")
-            from RAG_Misha.processing import Processing
+            from app.RAG_Misha.processing import Processing
             logger.info("=== RAG DEBUG: Import successful")
         except Exception as e:
             logger.error(f"=== RAG DEBUG: Import failed: {e}", exc_info=True)

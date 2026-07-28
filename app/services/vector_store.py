@@ -12,7 +12,7 @@ try:
 except ImportError:  # compatibility with older qdrant-client versions
     UnexpectedStatusCode = Exception
 
-from app.core.config import QDRANT_COLLECTION_NAME, SPARSE_SEARCH_ENABLED, SPARSE_VECTOR_NAME
+from app.core.config import QDRANT_COLLECTION_NAME, QDRANT_VECTOR_SIZE, SPARSE_SEARCH_ENABLED, SPARSE_VECTOR_NAME
 from app.core.dependencies import get_qdrant_client
 from app.services.acl import build_qdrant_filter
 
@@ -245,7 +245,7 @@ class VectorStore:
         """
         collection_name = collection_name or QDRANT_COLLECTION_NAME
         if vector_size is None:
-            vector_size = 384
+            vector_size = QDRANT_VECTOR_SIZE
 
         try:
             self.client.get_collection(collection_name=collection_name)

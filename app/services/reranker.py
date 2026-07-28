@@ -2,7 +2,9 @@
 
 import asyncio
 from typing import Optional, Any
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class Reranker:
     """Переранжирование результатов поиска с помощью Cross-Encoder.
@@ -14,7 +16,7 @@ class Reranker:
     _shared_model: Any = None
     _shared_model_name: str = ""
 
-    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+    def __init__(self, model_name: str = os.getenv('CROSS_ENC')):
         self.model_name = model_name
 
     def _load_model(self):

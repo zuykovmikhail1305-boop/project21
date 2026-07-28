@@ -18,8 +18,8 @@ class Processing():
         self.original_path = doc_path
         self.pdf_path = None
         # Читаем переменные окружения с дефолтными значениями
-        self.chunk_model = os.getenv("CHUNK_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-        self.chunk_threshold = int(os.getenv("CHUNK_THRESHOLD", "75"))  # если есть переменная, иначе 75
+        self.chunk_model = os.getenv("CHUNK_MODEL")
+        self.chunk_threshold = int(os.getenv("CHUNK_THRESHOLD"))  # если есть переменная, иначе 75
 
     def _convert_docx_to_pdf(self, docx_path):
         temp_pdf = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
@@ -28,7 +28,7 @@ class Processing():
         convert(docx_path, pdf_path)
         return pdf_path
 
-    def parsing(self, document_id):
+    def parsing(self):
         if not os.path.exists(self.original_path):
             raise FileNotFoundError(f"Файл не найден: {self.original_path}")
 

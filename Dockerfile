@@ -53,7 +53,6 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy application code
 COPY --from=builder /app /app
 COPY app/ /app/app/
-COPY migrations/ /app/migrations/
 COPY main.py /app/main.py
 
 WORKDIR /app
@@ -62,4 +61,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "main:fastapi_app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

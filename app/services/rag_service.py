@@ -110,6 +110,7 @@ class GigaChatRAGService:
                 system_prompt="Ты генерируешь гипотетический документ для поиска.",
                 temperature= float(os.getenv('HYDE_TEMPERATURE')),
                 max_tokens= int(os.getenv('HYDE_MAX_TOKEN'))
+                
             )
 
         logger.info("[TIMING] generate_hyde() took %.2fs", time.time() - t0)
@@ -218,7 +219,7 @@ class GigaChatRAGService:
         self,
         query: str,
         user_groups: list[int],
-        top_k: int = 20,
+        top_k: int = int(os.getenv('NUM_RESULTS')),
         history: Optional[list[dict]] = None,
     ) -> list[dict]:
         """Поиск релевантных чанков: dense + sparse + HyDE + RRF fusion.
@@ -314,7 +315,7 @@ class GigaChatRAGService:
 
         # 5. Reranking (асинхронный)
         t5 = time.time()
-        reranked = await self.reranker.rerank_async(query, fused, top_k=5)
+        reranked = await self.reranker.rerank_async(query, fused, top_k=int(os.getenv('TOP_RERANKED')))
         logger.info(
             "[TIMING] search() TOTAL took %.2fs (final=%d)",
             time.time() - t0, len(reranked)
@@ -330,7 +331,7 @@ class GigaChatRAGService:
         self,
         query_vector: list[float],
         user_groups: list[int],
-        top_k: int = 20,
+        top_k: int = int(os.getenv('NUM_RESULTS')),
     ) -> list[dict]:
         """Асинхронный поиск в Qdrant через VectorStore.
 
@@ -437,10 +438,6 @@ class GigaChatRAGService:
             logger.warning("=== RAG DEBUG: No nodes returned from chunking, returning empty")
             return []
         
-        from RAG_Misha.embending import Embedding
-        emb = Embedding()
-        emb.save_to_qdrant(nodes)
-
         points = []
         for index, node in enumerate(nodes):
             chunk_text = getattr(node, "text", None)
@@ -449,8 +446,7 @@ class GigaChatRAGService:
                 continue
 
             logger.info(f"=== RAG DEBUG: Embedding chunk {index}/{len(nodes)} (len={len(chunk_text)})")
-            
-            emb = Embedding()
+
             embedding = self.embedder.embed(chunk_text)
             point_id = str(uuid.uuid4())
 
@@ -553,7 +549,11 @@ class GigaChatRAGService:
                     "Отвечай только на основе предоставленного контекста. "
                     "Если информации недостаточно, честно скажи об этом.\n\n"
                     f"Контекст:\n{context}"
+                   
                 ),
+                temperature= float(os.getenv('AGENT_TEMPERATURE')),
+                max_tokens= int(os.getenv('AGENT_MAX_TOKEN'))
+                
             )
             logger.info("[TIMING] answer() LLM generate took %.2fs (answer_len=%d)", time.time() - t1, len(answer))
 

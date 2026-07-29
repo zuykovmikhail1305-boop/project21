@@ -66,8 +66,24 @@ class Processing():
             }
 
             if el.category == "Table" and hasattr(el.metadata, 'text_as_html'):
-                element_data["metadata"]["text_as_html"] = el.metadata.text_as_html
+                    element_data["metadata"]["text_as_html"] = el.metadata.text_as_html
+                    from app.services.gigachat_provider import GigaChatClient
+                    import markdownify
+    
+                    table_md = markdownify.markdownify(el.metadata.text_as_html, heading_style="ATX")
+                    giga = GigaChatClient()
+                    gen_text = giga.generate(
+                        prompt=table_md,
+                        system_prompt='Тебе дана табллица в формате Markdown. Ты должен преобразовать ее в текст.' \
+                        'Тебе необходимо передать весь её смысл, опиши что в ней проимходит, какие переменные, какие изменения и т.д.' \
+                        'Тебе необходимо передать только текст, без форматирования, который должен передавать весь смысл таблицы.',
+                        temperature=0.8,
+                        max_tokens=2048,
+                    )
 
+                    full_text = f"{el.text}\n\nТаблица в структурированном виде:\n{table_md}"
+                    element_data["text"] = full_text
+           
             result.append(element_data)
 
         if self.pdf_path and os.path.exists(self.pdf_path):
@@ -80,10 +96,7 @@ class Processing():
         if threshold is None:
             threshold = self.chunk_threshold
 
-        embed_model = HuggingFaceEmbedding(
-            model_name=self.chunk_model
-        )
-
+        embed_model = HuggingFaceEmbedding(model_name=self.chunk_model)
         splitter = SemanticSplitterNodeParser(
             embed_model=embed_model,
             buffer_size=1,
@@ -91,6 +104,7 @@ class Processing():
             include_metadata=True,
         )
 
+        # Для HYDE – оставляем как есть
         if text is not None:
             doc = Document(text=text, metadata={"source": "HYDE"})
             nodes = splitter.get_nodes_from_documents([doc])
@@ -100,19 +114,38 @@ class Processing():
         if not parsed_elements:
             return []
 
+        # Общие метаданные (без page_number)
         common_metadata = {
             k: v for k, v in parsed_elements[0]['metadata'].items()
             if k != 'page_number'
         }
 
-        pages = defaultdict(str)
-        for el in parsed_elements:
-            page = el['metadata'].get('page_number', 'unknown')
-            if page is None:
-                page = 'unknown'
-            pages[str(page)] += el['text'] + '\n\n'
-
         all_nodes = []
+        pages = defaultdict(str)   # сюда собираем текст для обычного чанкования
+
+        for el in parsed_elements:
+            # --- Таблицы пропускаем через сплиттер, добавляем как есть ---
+            if el['category'] == "Table":
+                # Формируем текст таблицы. Можно использовать el['text'] или преобразовать text_as_html в Markdown.
+                table_text = el['text']  # замените на структурированный вариант, если нужно
+
+                # Метаданные для таблицы
+                metadata = {
+                    **common_metadata,
+                    'page_number': el['metadata'].get('page_number', 'unknown'),
+                    'is_table': True,          # маркер, что это таблица
+                    'original_metadata': el['metadata']  # если нужен полный доступ
+                }
+                doc = Document(text=table_text, metadata=metadata)
+                all_nodes.append(doc)   # не разбиваем
+            else:
+                # --- Остальные элементы группируем по страницам для семантического чанкования ---
+                page = el['metadata'].get('page_number', 'unknown')
+                if page is None:
+                    page = 'unknown'
+                pages[str(page)] += el['text'] + '\n\n'
+
+        # Чанкуем обычные текстовые блоки
         for page, text in pages.items():
             doc = Document(
                 text=text,

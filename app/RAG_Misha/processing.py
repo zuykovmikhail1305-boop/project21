@@ -8,7 +8,8 @@ import re
 from collections import defaultdict
 import os
 import tempfile
-import logging
+import markdownify
+from app.services.gigachat_provider import GigaChatClient 
 from docx2pdf import convert
 from dotenv import load_dotenv
 load_dotenv()
@@ -33,18 +34,31 @@ class Processing():
         if not os.path.exists(self.original_path):
             raise FileNotFoundError(f"Файл не найден: {self.original_path}")
 
+        # Если это docx, конвертируем в pdf
         if self.original_path.lower().endswith('.docx'):
             self.pdf_path = self._convert_docx_to_pdf(self.original_path)
             file_to_parse = self.pdf_path
         else:
             file_to_parse = self.original_path
 
+        # ВАЖНО: Для извлечения таблиц из PDF нужна стратегия 'hi_res'
+        # Если файл остался docx, можно оставить 'auto', но для pdf строго 'hi_res'
+        strategy = 'hi_res' if file_to_parse.lower().endswith('.pdf') else 'auto'
+
         elements = partition(
             filename=file_to_parse,
-            strategy='auto',
-            languages=['rus', 'eng']
+            strategy=strategy,
+            languages=['rus', 'eng'],
+            # Для hi_res иногда полезно явно указать извлечение таблиц, 
+            # но по умолчанию в hi_res оно включено
+            extract_image_block_types=["Table"] # Опционально, зависит от версии unstructured
         )
+
+        # Инициализируем клиент ОДИН раз до цикла
+        giga = GigaChatClient()
+
         result = []
+
         for el in elements:
             if el.category in ["Header", "Footer", "PageBreak"]:
                 continue
@@ -55,51 +69,48 @@ class Processing():
             if not clean_text.strip():
                 continue
             
-            
-            l = logging.getLogger(__name__)
-            l.info(el.category)
-
             element_data = {
                 "category": el.category,
                 "text": clean_text,
                 "metadata": { 
-                    "page_number": el.metadata.page_number if el.metadata.page_number else None,
+                    "page_number": el.metadata.page_number if hasattr(el.metadata, 'page_number') else None,
                     "filename": el.metadata.filename if hasattr(el.metadata, 'filename') else None,
                     "filetype": el.metadata.filetype if hasattr(el.metadata, 'filetype') else None,
                     "languages": el.metadata.languages if hasattr(el.metadata, 'languages') else None,
                 }
             }
 
-            if el.category == "Table" and hasattr(el.metadata, 'text_as_html'):
-                    
-                    element_data["metadata"]["text_as_html"] = el.metadata.text_as_html
-                    from app.services.gigachat_provider import GigaChatClient
-                    import markdownify
-    
+            # Проверяем, что это таблица И есть html-представление И оно не пустое
+            if el.category == "Table" and hasattr(el.metadata, 'text_as_html') and el.metadata.text_as_html:
+                try:
+                    # Конвертируем HTML в Markdown
                     table_md = markdownify.markdownify(el.metadata.text_as_html, heading_style="ATX")
-                    giga = GigaChatClient()
+                    
+                    # Если таблица огромная, GigaChat может не влезть в контекст. 
+                    # Можно добавить проверку длины, но пока оставим как есть.
+                    
                     gen_text = giga.generate(
                         prompt=table_md,
-                        system_prompt='Тебе дана табллица в формате Markdown. Ты должен преобразовать ее в текст.' \
-                        'Тебе необходимо передать весь её смысл, опиши что в ней проимходит, какие переменные, какие изменения и т.д.' \
-                        'Тебе необходимо передать только текст, без форматирования, который должен передавать весь смысл таблицы.',
+                        system_prompt=(
+                            'Тебе дана таблица в формате Markdown. Ты должен преобразовать ее в связный текст. '
+                            'Тебе необходимо передать весь её смысл: опиши, что в ней происходит, какие переменные, '
+                            'какие изменения и т.д. '
+                            'Верни только текст, без markdown-форматирования, который должен передавать весь смысл таблицы.'
+                        ),
                         temperature=0.8,
                         max_tokens=2048,
                     )
-                    import logging
-                    l.info(gen_text)
-                    l.info('Таблица в структурированном виде:')
-                    l.info(table_md)   
 
                     full_text = f"{gen_text}\n\nТаблица в структурированном виде:\n{table_md}"
                     element_data["text"] = full_text
-           
+                    
+                except Exception as e:
+                    # Если GigaChat упал (например, из-за длины таблицы), оставляем просто markdown
+                    print(f"Ошибка при обработке таблицы через LLM: {e}")
+                    element_data["text"] = f"Таблица в структурированном виде:\n{table_md}"
+
             result.append(element_data)
-
-        if self.pdf_path and os.path.exists(self.pdf_path):
-            os.unlink(self.pdf_path)
-            self.pdf_path = None
-
+            
         return result
 
     def chunking(self, text=None, threshold=None):

@@ -1,5 +1,6 @@
 """Reranker Service - совместимая версия для старого кода (обёртка над rag_finder.py)."""
 
+<<<<<<< HEAD
 from sentence_transformers import CrossEncoder
 import os
 from dotenv import load_dotenv
@@ -8,6 +9,13 @@ load_dotenv()
 
 from app.core import config
 
+=======
+import asyncio
+from typing import Optional, Any
+import os
+from dotenv import load_dotenv
+load_dotenv()
+>>>>>>> new_web
 
 class Reranker:
     """Переранжирование результатов поиска с помощью Cross-Encoder.
@@ -19,8 +27,13 @@ class Reranker:
     _shared_model: Any = None
     _shared_model_name: str = ""
 
+<<<<<<< HEAD
     def __init__(self, model_name: Optional[str] = None):
         self.model_name = model_name or config.RERANKER_MODEL
+=======
+    def __init__(self, model_name: str = os.getenv('CROSS_ENC')):
+        self.model_name = model_name
+>>>>>>> new_web
 
     def _load_model(self):
         """Загрузить модель."""

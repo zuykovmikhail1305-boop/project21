@@ -7,7 +7,7 @@ import os
 
 load_dotenv('.env')
 
-# === SQLite ===
+# === Database ===
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:postgres@postgres:5432/project21" # or "sqlite:///./project21.db"

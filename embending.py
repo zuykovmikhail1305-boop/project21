@@ -1,6 +1,9 @@
 import requests
 import uuid
 from sentence_transformers import SentenceTransformer
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class Embedding:
     def __init__(self, qdrant_url="http://localhost:6333"):
@@ -37,7 +40,7 @@ class Embedding:
         if resp.status_code == 404:
             create_payload = {
                 "vectors": {
-                    "size": 384,
+                    "size": int(os.getenv('QDRANT_VECTOR_SIZE')),
                     "distance": "Cosine"
                 }
             }

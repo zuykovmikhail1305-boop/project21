@@ -8,6 +8,7 @@ import re
 from collections import defaultdict
 import os
 import tempfile
+import logging
 from docx2pdf import convert
 from dotenv import load_dotenv
 load_dotenv()
@@ -53,6 +54,10 @@ class Processing():
 
             if not clean_text.strip():
                 continue
+            
+            
+            l = logging.getLogger(__name__)
+            l.info(el.category)
 
             element_data = {
                 "category": el.category,
@@ -66,6 +71,7 @@ class Processing():
             }
 
             if el.category == "Table" and hasattr(el.metadata, 'text_as_html'):
+                    
                     element_data["metadata"]["text_as_html"] = el.metadata.text_as_html
                     from app.services.gigachat_provider import GigaChatClient
                     import markdownify
@@ -80,8 +86,12 @@ class Processing():
                         temperature=0.8,
                         max_tokens=2048,
                     )
+                    import logging
+                    l.info(gen_text)
+                    l.info('Таблица в структурированном виде:')
+                    l.info(table_md)   
 
-                    full_text = f"{el.text}\n\nТаблица в структурированном виде:\n{table_md}"
+                    full_text = f"{gen_text}\n\nТаблица в структурированном виде:\n{table_md}"
                     element_data["text"] = full_text
            
             result.append(element_data)

@@ -53,8 +53,12 @@
                         <p class="text-caption text-on-surface-variant mt-2">PDF, DOCX, XLSX, TXT (макс. 50 MB)</p>
                         <input class="hidden" type="file" name="file" id="file-input" accept=".pdf,.docx,.xlsx,.txt"/>
                     </div>
+                    <label for="pii-consent" class="flex items-start gap-3 p-4 rounded-xl bg-surface-container-low border border-outline-variant/20 cursor-pointer">
+                        <input type="checkbox" id="pii-consent" class="mt-1 h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary/30">
+                        <span class="text-body-sm text-on-surface-variant">Файл не содержит персональной информации</span>
+                    </label>
                     <div class="flex items-center gap-4">
-                        <button type="submit" class="px-8 py-3.5 bg-primary text-on-primary rounded-xl font-bold hover:shadow-glow transition-all active:scale-95">
+                        <button type="submit" id="upload-submit-btn" class="px-8 py-3.5 bg-primary text-on-primary rounded-xl font-bold hover:shadow-glow transition-all active:scale-95 disabled:opacity-38 disabled:cursor-not-allowed disabled:hover:shadow-none" disabled>
                             <span id="upload-btn-text">Запустить</span>
                             <span id="upload-btn-spinner" class="hidden">
                                 <svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -197,6 +201,13 @@
     const uploadBtnText = document.getElementById('upload-btn-text');
     const uploadBtnSpinner = document.getElementById('upload-btn-spinner');
     const uploadError = document.getElementById('upload-error');
+    const piiConsent = document.getElementById('pii-consent');
+    const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+
+    function updateUploadSubmitState() {
+        if (!uploadSubmitBtn) return;
+        uploadSubmitBtn.disabled = !piiConsent?.checked;
+    }
 
     // Click drop zone to open file picker
     const dropZone = document.getElementById('drop-zone');
@@ -215,6 +226,9 @@
             }
         }
     });
+
+    piiConsent?.addEventListener('change', updateUploadSubmitState);
+    updateUploadSubmitState();
 
     // Drag and drop support
     dropZone?.addEventListener('dragover', (e) => {
@@ -249,9 +263,15 @@
             uploadError.classList.remove('hidden');
             return;
         }
+        if (!piiConsent?.checked) {
+            uploadError.textContent = 'Подтвердите, что файл не содержит персональных данных';
+            uploadError.classList.remove('hidden');
+            return;
+        }
 
         uploadBtnText.classList.add('hidden');
         uploadBtnSpinner.classList.remove('hidden');
+        uploadSubmitBtn.disabled = true;
 
         try {
             const formData = new FormData();
@@ -281,6 +301,7 @@
         } finally {
             uploadBtnText.classList.remove('hidden');
             uploadBtnSpinner.classList.add('hidden');
+            updateUploadSubmitState();
         }
     });
 

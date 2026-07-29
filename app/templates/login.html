@@ -79,7 +79,10 @@
 </div>
 
 <script>
-    if (window.location.search.includes('registered=1')) {
+    const loginSearchParams = new URLSearchParams(window.location.search);
+    const shouldStartInterfaceTour = loginSearchParams.get('registered') === '1';
+
+    if (shouldStartInterfaceTour) {
         document.getElementById('register-success').classList.remove('hidden');
     }
 
@@ -111,6 +114,12 @@
                 const data = await response.json();
                 localStorage.setItem('access_token', data.access_token);
                 localStorage.setItem('refresh_token', data.refresh_token);
+                if (shouldStartInterfaceTour) {
+                    localStorage.setItem('start_interface_tour', '1');
+                    localStorage.removeItem('interface_tour_disabled');
+                    localStorage.removeItem('interface_tour_completed');
+                    localStorage.setItem('interface_tour_step', '0');
+                }
                 window.location.href = '/';
             } else {
                 const data = await response.json();

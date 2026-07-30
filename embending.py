@@ -145,7 +145,7 @@ class Embedding:
                 collection_name=collection_name,
                 offset=offset,
                 with_payload=True,
-                limit=None,
+                limit=100,
                 with_vectors=False,
                 filter=filter_obj
             )

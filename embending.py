@@ -9,18 +9,41 @@ load_dotenv()
 
 
 class Embedding:
+    @staticmethod
+    def _env_to_bool(value, default=False):
+        if value is None:
+            return default
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
     def __init__(self):
         self.emb_model = os.getenv("EMB_MODEL", "sergeyzh/rubert-tiny-turbo")
         self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
         self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
         self.sparse_model = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
-        self.model = SentenceTransformer(self.emb_model)
+        self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
+        self.fastembed_cache_dir = os.getenv("FASTEMBED_CACHE_DIR") or self.model_cache_dir
+        self.local_files_only = self._env_to_bool(os.getenv("LOCAL_FILES_ONLY"), default=False)
+
+        if self.local_files_only:
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+        st_kwargs = {
+            "local_files_only": self.local_files_only,
+        }
+        if self.model_cache_dir:
+            st_kwargs["cache_folder"] = self.model_cache_dir
+
+        self.model = SentenceTransformer(self.emb_model, **st_kwargs)
         self.vector_size = int(os.getenv("QDRANT_VECTOR_SIZE", "312"))
         self.client = QdrantClient(
             url=self.qdrant_url,
             api_key=os.getenv("QDRANT_API_KEY"),
         )
-        self.client.set_sparse_model(self.sparse_model)
+        sparse_kwargs = {}
+        if self.fastembed_cache_dir:
+            sparse_kwargs["cache_dir"] = self.fastembed_cache_dir
+        self.client.set_sparse_model(self.sparse_model, **sparse_kwargs)
         self.sparse_vector_name = self.client.get_sparse_vector_field_name() or "fast-sparse-bm25"
 
     def encode_dense(self, text):
@@ -79,7 +102,7 @@ class Embedding:
             sparse_vec = self.encode_sparse(text)
             points.append(
                 models.PointStruct(
-                    id=str(uuid.uuid4()), 
+                    id=str(uuid.uuid4()),
                     vector={
                         "dense": dense_vec,
                         self.sparse_vector_name: sparse_vec,
@@ -95,28 +118,35 @@ class Embedding:
             print(f"Сохранено {min(i + batch_size, total)} из {total}")
         print(f"✅ Все {total} точек сохранены в коллекцию '{collection_name}'")
 
-    def dense_search(self, query, collection_name=None, limit=20):
-        if collection_name is None:
-            collection_name = self.collection_name
-
-        dense_vec = self.encode_dense(query)
-        result = self.client.query_points(
-            collection_name=collection_name,
-            query=dense_vec,
-            limit=limit,
-            with_payload=True,
+    def get_chunks_by_doc_id(self, doc_id):
+        collection_name = self.collection_name
+        filter_obj = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="metadata.doc_id",
+                    match=models.MatchValue(value=doc_id)
+                )
+            ]
         )
-        hits = getattr(result, "points", result)
-        return [{
-            "text": hit.payload.get("text", "") if hit.payload else "",
-            "metadata": hit.payload.get("metadata", {}) if hit.payload else {},
-            "score": hit.score,
-            "id": hit.id,
-        } for hit in hits]
 
-    def hybrid_search(self, query, collection_name=None, limit=20):
-        if collection_name is None:
-            collection_name = self.collection_name
+        all_points = []
+        offset = None
+        while True:
+            points, offset = self.client.scroll(
+                collection_name=collection_name,
+                offset=offset,
+                limit=None,
+                with_payload=True,
+                with_vectors=False,  # векторы не нужны, если только для вывода
+                filter=filter_obj
+            )
+            if not points:
+                break
+            all_points.extend(points)
+        return all_points
+
+    def hybrid_search(self, query, limit=int(os.getenv('NUM_RESULTS'))):
+        collection_name = self.collection_name
 
         dense_vec = self.encode_dense(query)
         sparse_vec = self.encode_sparse(query)

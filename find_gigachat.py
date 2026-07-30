@@ -1,0 +1,150 @@
+"""RAG Finder: гибридный поиск (HyDE + BM25 + Dense + Reranking) с использованием GigaChat."""
+
+from langchain_gigachat.chat_models import GigaChat
+from embending import Embedding
+from bm25_search import BM25Search
+from processing import Processing
+from sentence_transformers import CrossEncoder
+from app.core.config import *
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class Find_answer:
+    _cross_encoder = None
+
+    @staticmethod
+    def _env_to_bool(value, default=False):
+        if value is None:
+            return default
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+    def __init__(self, text, history=None):
+        self.text = text
+        self.history = history if history is not None else []
+
+        # Конфиг для HyDE
+        self.hyde_temperature = float()
+        self.hyde_max_tokens = int(HYDE_MAX_TOKEN)
+
+        self.num_results = int(NUM_RESULTS)
+        self.max_chunks = int(MAX_CHUNK_HYDE)
+        self.top_k = int(TOP_RERANKED)
+        self.limit_rrf = int(LIMIT_RRF)
+        self.cross_encoder_model = CROSS_ENC
+        self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
+        self.local_files_only = self._env_to_bool(os.getenv("LOCAL_FILES_ONLY"), default=False)
+
+        if self.local_files_only:
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+        # Используем GigaChat для HyDE генерации
+        self.client = GigaChat(
+            credentials=GIGACHAT_CREDENTIALS,
+            model=GIGACHAT_MODEL,
+            temperature=self.hyde_temperature,
+            max_tokens=self.hyde_max_tokens,
+            verify_ssl_certs=False
+        )
+
+    def _format_history(self):
+        if not self.history:
+            return "История диалога пуста."
+        formatted = []
+        for msg in self.history:
+            role = "Пользователь" if msg["role"] == "user" else "Ассистент"
+            formatted.append(f"{role}: {msg['content']}")
+        return "\n".join(formatted)
+
+    def HYDE(self, text):
+        history_str = self._format_history()
+        system_prompt = f"""Ты — генератор гипотетических документов для поиска (HyDE).
+Твоя задача — по запросу пользователя создать короткий, связный текст, который выглядит как фрагмент реального документа, содержащего ответ на этот запрос.
+
+История диалога (для контекста):
+{history_str}
+
+Текущий запрос пользователя: {text}
+
+Учитывая историю, сгенерируй гипотетический документ, который отвечает на текущий запрос, но при этом учитывает предыдущие обсуждения.
+Стиль текста должен быть максимально приближен к стилю документов в целевой коллекции (например, научная статья, техническая инструкция, энциклопедическая справка).
+Фактическая точность не важна — главное — правдоподобие и релевантность теме.
+Не добавляй вводных фраз, пояснений или мета-комментариев. Выведи только текст гипотетического документа.
+Не учитывай к каком году ты был обучен, если пользователь просит найти документы из года, в котором ты не был ещё обучен, то просто придумывай создавай документ с учётом года пользователя.
+Если запрос является уточнением, постарайся включить в документ информацию, связывающую его с предыдущим контекстом."""
+
+        response = self.client.invoke([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ])
+        return response.content
+
+    def find_answer(self, num_results=None, split_hypothesis=True, max_chunks=None):
+        """
+        Основной метод поиска.
+        :param num_results: количество финальных результатов
+        :param split_hypothesis: если True, разбивает HYDE-документ на чанки и ищет по каждому
+        :param max_chunks: максимальное число чанков (если split_hypothesis=True)
+        """
+        if num_results is None:
+            num_results = self.num_results
+        if max_chunks is None:
+            max_chunks = self.max_chunks
+
+        try:
+            hyde = self.HYDE(self.text)
+            print("Гипотетический документ:", hyde)
+
+            emb = Embedding()
+            all_search_lists = []
+
+            if split_hypothesis:
+                proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
+                nodes = proc.chunking(text=hyde)
+                # Берём не более max_chunks первых чанков
+                chunks = [node.text for node in nodes]
+                print(f"Разбито на {len(chunks)} чанков для поиска.")
+                for chunk in chunks:
+                    results = emb.hybrid_search(chunk)
+                    all_search_lists.append(results)
+            else:
+                result = emb.hybrid_search(hyde)
+                all_search_lists.append(result)
+
+            return all_search_lists
+
+        except Exception as e:
+            print(f"Ошибка при поиске: {e}")
+            return []
+
+    def reranked(self, query, candidates, top_k=None):
+        if top_k is None:
+            top_k = self.top_k
+
+        if not candidates:
+            return []
+        if Find_answer._cross_encoder is None:
+            ce_kwargs = {
+                "local_files_only": self.local_files_only,
+            }
+            if self.model_cache_dir:
+                ce_kwargs["cache_folder"] = self.model_cache_dir
+
+            Find_answer._cross_encoder = CrossEncoder(self.cross_encoder_model, **ce_kwargs)
+            print("Кросс-энкодер загружен.")
+        pairs = [(query, cand['text']) for cand in candidates]
+        rerank_scores = Find_answer._cross_encoder.predict(pairs)
+        for cand, new_score in zip(candidates, rerank_scores):
+            cand['rerank_score'] = float(new_score)
+        ranked = sorted(candidates, key=lambda x: x['rerank_score'], reverse=True)
+        return ranked[:top_k]
+
+    def update_history(self, question, answer):
+        self.history.append({"role": "user", "content": question})
+        self.history.append({"role": "assistant", "content": answer})
+
+    def clear_history(self):
+        self.history = []

@@ -14,12 +14,25 @@ load_dotenv()
 
 
 class Processing():
-    def __init__(self, doc_path):
+    @staticmethod
+    def _env_to_bool(value, default=False):
+        if value is None:
+            return default
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+    def __init__(self, doc_path, doc_id=None):
         self.original_path = doc_path
+        self.doc_id = doc_id
         self.pdf_path = None
         # Читаем переменные окружения с дефолтными значениями
         self.chunk_model = os.getenv("CHUNK_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
         self.chunk_threshold = int(os.getenv("CHUNK_THRESHOLD", "75"))  # если есть переменная, иначе 75
+        self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
+        self.local_files_only = self._env_to_bool(os.getenv("LOCAL_FILES_ONLY"), default=False)
+
+        if self.local_files_only:
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
     def _convert_docx_to_pdf(self, docx_path):
         temp_pdf = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
@@ -62,6 +75,7 @@ class Processing():
                     "filename": el.metadata.filename if hasattr(el.metadata, 'filename') else None,
                     "filetype": el.metadata.filetype if hasattr(el.metadata, 'filetype') else None,
                     "languages": el.metadata.languages if hasattr(el.metadata, 'languages') else None,
+                    'document_id': self.doc_id
                 }
             }
 
@@ -80,9 +94,13 @@ class Processing():
         if threshold is None:
             threshold = self.chunk_threshold
 
-        embed_model = HuggingFaceEmbedding(
-            model_name=self.chunk_model
-        )
+        hf_kwargs = {
+            "model_name": self.chunk_model,
+        }
+        if self.model_cache_dir:
+            hf_kwargs["cache_folder"] = self.model_cache_dir
+
+        embed_model = HuggingFaceEmbedding(**hf_kwargs)
 
         splitter = SemanticSplitterNodeParser(
             embed_model=embed_model,

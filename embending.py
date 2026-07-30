@@ -150,6 +150,7 @@ class Embedding:
                 filter=filter_obj
             )
 
+            
             if not points:
                 break
 

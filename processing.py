@@ -88,7 +88,7 @@ class Processing():
 
         return result
 
-    def chunking(self, text=None, threshold=None, doc_id=None, original_path=None):
+    def chunking(self, text=None, threshold=None, doc_id=None, original_path=None, Hyde = False):
         if threshold is None:
             threshold = self.chunk_threshold
 
@@ -107,7 +107,7 @@ class Processing():
             include_metadata=True,
         )
 
-        if text is not None:
+        if Hyde == True:
             doc = Document(text=text, metadata={"source": "HYDE"})
             nodes = splitter.get_nodes_from_documents([doc])
             return nodes

@@ -81,45 +81,6 @@ class Find_answer():
         ])
         return response.content
 
-    def find_answer(self, num_results=None, max_chunks=None, query=None):
-        """
-        Основной метод поиска.
-        :param num_results: количество финальных результатов
-        :param split_hypothesis: если True, разбивает HYDE-документ на чанки и ищет по каждому
-        :param max_chunks: максимальное число чанков (если split_hypothesis=True)
-        """
-        if num_results is None:
-            num_results = self.num_results
-        if max_chunks is None:
-            max_chunks = self.max_chunks
-
-        try:
-            hyde = self.HYDE(query)
-            print("Гипотетический документ:", hyde)
-
-            emb = Embedding()
-            all_search_lists = []
-            texts = []
-
-            
-            proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
-            nodes = proc.chunking(text=hyde)
-            # Берём не более max_chunks первых чанков
-            chunks = [node.text for node in nodes]
-            print(f"Разбито на {len(chunks)} чанков для поиска.")
-            for chunk in chunks:
-                results = emb.hybrid_search(chunk)
-                all_search_lists.append(results)
-                for item in results or []:
-                    if isinstance(item, dict) and item.get("text"):
-                        texts.append(item["text"])
-           
-            return texts if texts else all_search_lists
-
-        except Exception as e:
-            print(f"Ошибка при поиске: {e}")
-            return []
-
     def reranked(self, query, candidates, top_k=None):
         if top_k is None:
             top_k = self.top_k
@@ -141,6 +102,57 @@ class Find_answer():
             cand['rerank_score'] = float(new_score)
         ranked = sorted(candidates, key=lambda x: x['rerank_score'], reverse=True)
         return ranked[:top_k]
+
+    
+    def find_answer(self, num_results=None, max_chunks=None, query=None, top_k=None):
+        """
+        Основной метод поиска.
+        :param num_results: количество финальных результатов
+        :param max_chunks: максимальное число чанков
+        :param top_k: количество лучших результатов после reranking
+        """
+        if num_results is None:
+            num_results = self.num_results
+        if max_chunks is None:
+            max_chunks = self.max_chunks
+        if top_k is None:
+            top_k = self.top_k
+
+        try:
+            if not query:
+                return []
+
+            hyde = self.HYDE(query)
+            print("Гипотетический документ:", hyde)
+
+            emb = Embedding()
+            candidates = []
+            texts = []
+
+            proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
+            nodes = proc.chunking(text=hyde)
+            chunks = [node.text for node in nodes[:max_chunks]]
+            print(f"Разбито на {len(chunks)} чанков для поиска.")
+
+            for chunk in chunks:
+                results = emb.hybrid_search(chunk)
+                for item in results or []:
+                    if isinstance(item, dict) and item.get("text"):
+                        candidates.append(item)
+                        texts.append(item["text"])
+
+            if not candidates:
+                return []
+
+            reranked_results = self.reranked(query, candidates, top_k=num_results)
+            if reranked_results:
+                return [item["text"] for item in reranked_results]
+
+            return texts[:num_results]
+
+        except Exception as e:
+            print(f"Ошибка при поиске: {e}")
+            return []
 
     def update_history(self, question, answer):
         self.history.append({"role": "user", "content": question})

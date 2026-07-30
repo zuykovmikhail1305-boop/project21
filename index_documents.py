@@ -37,8 +37,6 @@ class CreateIndex:
             emb.delete_collection(self.collection_name)
             if self.index_file and os.path.exists(self.index_file):
                 os.remove(self.index_file)
-                print(f"🗑️ Старый BM25 индекс удалён ({self.index_file})")
-
         try:
             processor = Processing(self.file_path)
             chunks = processor.chunking()
@@ -46,10 +44,8 @@ class CreateIndex:
             raise RuntimeError(f"Ошибка при обработке {self.file_path}: {exc}") from exc
 
         if not chunks:
-            print(f"⚠️ Для файла {self.file_path} не удалось получить чанки.")
             return None
 
-        print("💾 Сохранение в Qdrant...")
         emb.save_to_qdrant(
             chunks,
             collection_name=self.collection_name,

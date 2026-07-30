@@ -21,16 +21,22 @@ from app.schemas.rag import (
     RAGSearchRequest,
     RAGSearchResponse,
 )
-from app.services.rag_service import GigaChatRAGService
+from app.RAG_Misha.processing import Processing
+from app.RAG_Misha.find import Find_answer
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
 
-def get_rag_service() -> GigaChatRAGService:
-    """Dependency: получить инстанс GigaChatRAGService."""
-    return GigaChatRAGService()
+def get_Processing(file_path) -> Processing:
+    """Dependency: получить инстанс Processing."""
+    return Processing()
+
+
+def get_Find_answer() -> Find_answer:
+    """Dependency: получить инстанс Find_answer."""
+    return Find_answer()
 
 
 @router.post("/search", response_model=RAGSearchResponse)

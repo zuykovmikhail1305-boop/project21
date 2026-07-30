@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-from app.services.rag_finder import Find_answer
+# from app.services.rag_finder import Find_answer
 from app.services.agent_rag import Agent
 from app.services.rag_indexer import create_index
 from app.services.bm25_searcher import BM25Search

@@ -3,23 +3,21 @@
 import logging
 from typing import Optional, List, Dict, Any
 
+from app.services.gigachat_provider import GigaChatClient
 from app.services.vector_store import VectorStore
 from app.services.reranker import Reranker
 from app.services.embedder import EmbedderService
 from app.services.rag_embedder import Embedding
-from app.services.document_processor import Processing
+# from app.services.document_processor import Processing
 from app.services.bm25_searcher import BM25Search
 import os
 import pickle
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv('.env')
 
 logger = logging.getLogger(__name__)
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
 
 
 class GigaChatRAGService:
@@ -34,14 +32,10 @@ class GigaChatRAGService:
         self.vector_store = vector_store or VectorStore()
         self.embedder = embedder or EmbedderService()
         self.reranker = reranker or Reranker()
-<<<<<<< HEAD
-        self.embedding = Embedding()
-        self.logger = logger
-=======
         self.llm = GigaChatClient()
         self._use_gigachat = bool(
-            getattr(config, "GIGACHAT_CLIENT_ID", "")
-            and getattr(config, "GIGACHAT_CLIENT_SECRET", "")
+            getattr("GIGACHAT_CLIENT_ID", "")
+            and getattr("GIGACHAT_CLIENT_SECRET", "")
         )
 
     def _build_hyde_prompt(self, query: str, history: Optional[list[dict]] = None) -> str:
@@ -73,7 +67,7 @@ class GigaChatRAGService:
         query: str,
         history: Optional[list[dict]] = None,
         split_chunks: bool = True,
-        max_chunks: int = int(os.getenv('MAX_CHUNK_HYDE')),
+        max_chunks: int = int(os.getenv('MAX_CHUNK_HYDE', )),
     ) -> list[str]:
         """Генерация HyDE с разбиением на чанки для множественного поиска.
 
@@ -221,34 +215,20 @@ class GigaChatRAGService:
             return [hyde_text]
 
         return paragraphs[:max_chunks]
->>>>>>> new_web
 
     async def search(
         self,
         query: str,
-<<<<<<< HEAD
-        user_groups: List[int],
-        history: Optional[List[Dict]] = None,
-        limit: int = 20,
-    ) -> List[Dict]:
-        """Поиск релевантных документов (для совместимости)."""
-        # Используем векторный поиск
-        results = self.vector_store.search(query, limit=limit)
-=======
         user_groups: list[int],
         top_k: int = int(os.getenv('NUM_RESULTS')),
         history: Optional[list[dict]] = None,
     ) -> list[dict]:
         """Поиск релевантных чанков: dense + sparse + HyDE + RRF fusion.
->>>>>>> new_web
 
         # Переранжируем результаты если есть
         if results:
             results = self.reranker.rerank(query, results, top_k=min(5, len(results)))
 
-<<<<<<< HEAD
-        return results
-=======
         Args:
             query: Поисковый запрос.
             user_groups: Список ID групп пользователя (для ACL).
@@ -367,9 +347,9 @@ class GigaChatRAGService:
 
         try:
             result = await self.vector_store.search(
-                query_vector=query_vector,
+                query=query_vector,
                 user_groups=user_groups,
-                top_k=top_k,
+                limit=top_k,
             )
             logger.info("[TIMING] _search_with_vector_store() took %.2fs (n=%d)", time.time() - t0, len(result))
             return result
@@ -407,7 +387,6 @@ class GigaChatRAGService:
         # Если правил нет — используем значение по умолчанию
         # [0] = публичный доступ (все authenticated пользователи)
         return [0]
->>>>>>> new_web
 
     def index_document(
         self,
@@ -416,43 +395,12 @@ class GigaChatRAGService:
     ) -> List[Dict]:
         """Индексировать документ (парсинг + чанкинг + эмбеддинги)."""
         try:
-<<<<<<< HEAD
-            # Парсируем документ
-            processor = Processing(file_path)
-            chunks = processor.chunking()
-
-            if not chunks:
-                self.logger.warning(f"No chunks extracted from {file_path}")
-                return []
-
-            # Преобразуем chunks в нужный формат
-            points = []
-            for chunk in chunks:
-                point = {
-                    "text": chunk.text,
-                    "metadata": {
-                        "document_id": document_id,
-                        "page_number": chunk.metadata.get("page_number"),
-                        "filename": chunk.metadata.get("filename", os.path.basename(file_path)),
-                    }
-                }
-                points.append(point)
-
-            # Сохраняем в Qdrant
-            self.embedding.save_to_qdrant(points)
-
-            return points
-
-=======
             logger.info("=== RAG DEBUG: Importing RAG_Misha.processing.Processing...")
             from app.RAG_Misha.processing import Processing
             logger.info("=== RAG DEBUG: Import successful")
->>>>>>> new_web
         except Exception as e:
             self.logger.error(f"Error indexing document {file_path}: {e}")
             raise
-<<<<<<< HEAD
-=======
 
         logger.info(f"=== RAG DEBUG: Creating Processing instance...")
         processor = Processing(file_path)
@@ -590,4 +538,3 @@ class GigaChatRAGService:
             "citations": citations,
             "chunks": chunks,
         }
->>>>>>> new_web

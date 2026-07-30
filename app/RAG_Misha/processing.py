@@ -14,6 +14,7 @@ from docx2pdf import convert
 from docforge import DocumentProcessor, DocForgeException
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
+from app.core.config import *
 load_dotenv()
 
 
@@ -21,8 +22,8 @@ class Processing():
     def __init__(self, doc_path):
         self.original_path = doc_path
         # Читаем переменные окружения
-        self.chunk_model = os.getenv("CHUNK_MODEL")
-        self.chunk_threshold = int(os.getenv("CHUNK_THRESHOLD", 75))
+        self.chunk_model = CHUNK_MODEL
+        self.chunk_threshold = int(CHUNK_THRESHOLD)
         self.docforge = DocumentProcessor(verbose=False)
 
     def _convert_docx_to_pdf(self, docx_path):

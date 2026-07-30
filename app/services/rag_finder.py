@@ -3,7 +3,7 @@
 from langchain_gigachat.chat_models import GigaChat
 from app.services.rag_embedder import Embedding
 from app.services.bm25_searcher import BM25Search
-from app.services.document_processor import Processing
+from app.RAG_Misha.processing import Processing
 from sentence_transformers import CrossEncoder
 import os
 from dotenv import load_dotenv

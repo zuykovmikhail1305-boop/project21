@@ -148,3 +148,22 @@ SPARSE_VECTOR_NAME = os.getenv("SPARSE_VECTOR_NAME", "bm25")
 
 # === Self API URL (для внутренних HTTP-вызовов к самому себе) ===
 SELF_API_URL = os.getenv("SELF_API_URL", "http://localhost:8000/api/v1")
+
+
+CHUNK_MODEL = os.getenv('CHUNK_MODEL', 'sergeyzh/rubert-tiny-turbo') #
+CHUNK_THRESHOLD = os.getenv('CHUNK_THRESHOLD', '75') #
+
+INDEX_PATH = os.getenv('INDEX_PATH', '')
+FILE_PATH = os.getenv('FILE_PATH', '/storage')
+
+AGENT_TEMPERATURE = os.getenv('AGENT_TEMPERATURE', '0.1') #
+AGENT_MAX_TOKEN = os.getenv('AGENT_MAX_TOKEN', '8192') #
+
+# HyDe Setting
+HYDE_TEMPERATURE = os.getenv('HYDE_TEMPERATURE', '0.7') #
+HYDE_MAX_TOKEN = os.getenv('HYDE_MAX_TOKEN', '2048') #
+MAX_CHUNK_HYDE = os.getenv('MAX_CHUNK_HYDE', '5') #
+LIMIT_RRF = os.getenv('LIMIT_RRF', '20') #
+NUM_RESULTS = os.getenv('NUM_RESULTS', '20') #
+TOP_RERANKED = os.getenv('TOP_RERANKED', '5') #
+CROSS_ENC = os.getenv('CROSS_ENC', 'DiTy/cross-encoder-russian-msmarco') #

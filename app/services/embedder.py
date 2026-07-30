@@ -4,26 +4,14 @@ from app.services.rag_embedder import Embedding
 import os
 from dotenv import load_dotenv
 
-<<<<<<< HEAD
-load_dotenv()
-
-=======
 from app.core import config
 import os
 from dotenv import load_dotenv
 load_dotenv()
->>>>>>> new_web
 
 class EmbedderService:
     """Embedding service - обёртка для обратной совместимости."""
 
-<<<<<<< HEAD
-    def __init__(self, model_name=None, device=None):
-        self.model_name = model_name or os.getenv("EMB_MODEL", "all-MiniLM-L6-v2")
-        self.device = device or os.getenv("EMBEDDING_DEVICE", "cpu")
-        self._embedding = Embedding()
-        self.model = self._embedding.model
-=======
     def __init__(
         self,
         model_name: str = str(os.getenv('EMB_MODEL')),
@@ -57,7 +45,6 @@ class EmbedderService:
                 return loop.run_until_complete(provider.generate_embeddings(text))
             finally:
                 loop.close()
->>>>>>> new_web
 
     def _load_model(self):
         """Загрузить модель (для совместимости)."""

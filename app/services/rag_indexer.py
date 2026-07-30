@@ -3,20 +3,18 @@
 import os
 import pickle
 import glob
-from app.services.document_processor import Processing
+from app.RAG_Misha.processing import Processing
 from app.services.rag_embedder import Embedding
 from app.services.bm25_searcher import BM25Search
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import *
 
 
 def create_index(
-    folder_path=os.getenv("FILE_PATH"),
-    collection_name=os.getenv("QDRANT_COLLECTION"),
-    index_file=os.getenv("INDEX_PATH"),
+    folder_path=FILE_PATH,
+    collection_name=QDRANT_COLLECTION_NAME,
+    index_file=INDEX_PATH,
     recreate=False,
-    chunking_threshold=os.getenv("CHUNK_THRESHOLD", 75)
+    chunking_threshold=CHUNK_THRESHOLD
 ):
     """
     Создаёт коллекцию в Qdrant и BM25 индекс для всех документов в папке.

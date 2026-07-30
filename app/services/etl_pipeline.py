@@ -22,17 +22,14 @@ from app.crud.crud_document import (
     get_document_permissions,
 )
 from app.models.document import DocumentStatus
+from app.services import token
 from app.services.rag_client import RAGClient
 
 logger = logging.getLogger(__name__)
 
 
-<<<<<<< HEAD
-def process_document(document_id: int, token: Optional[str] = None) -> None:
-=======
 
-def process_document(document_id: int) -> None:
->>>>>>> new_web
+def process_document(document_id: int, token: Optional[str] = None) -> None:
     """Обработать документ: парсинг → чанкинг → эмбеддинги → сохранение.
 
     Запускается в фоновой задаче (BackgroundTasks).
@@ -74,6 +71,7 @@ def process_document(document_id: int) -> None:
         logger.info(f"=== ETL DEBUG: Old chunks deleted for doc {document_id}")
 
         # 4. Сохраняем метаданные чанков в PostgreSQL
+        # TODO: добавить реальное сохранение 
         # NOTE: RAGClient.index_document() возвращает пустой список,
         # так как API не возвращает полные точки.
         # Метаданные чанков сохраняются в БД через callback или отдельный эндпоинт.

@@ -4,9 +4,6 @@ from app.services.rag_embedder import Embedding
 import os
 from dotenv import load_dotenv
 
-<<<<<<< HEAD
-load_dotenv()
-=======
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 
@@ -18,7 +15,6 @@ except ImportError:  # compatibility with older qdrant-client versions
 from app.core.config import QDRANT_COLLECTION_NAME, QDRANT_VECTOR_SIZE, SPARSE_SEARCH_ENABLED, SPARSE_VECTOR_NAME
 from app.core.dependencies import get_qdrant_client
 from app.services.acl import build_qdrant_filter
->>>>>>> new_web
 
 
 class VectorStore:
@@ -38,13 +34,10 @@ class VectorStore:
         return results
 
     def save_vectors(self, data, collection_name: str = None):
-        """Сохранить векторы в Qdrant."""
+        """Сохранить векторы в Qdrant.
         if collection_name is None:
             collection_name = self.collection_name
 
-<<<<<<< HEAD
-        self.embedding.save_to_qdrant(data, collection_name=collection_name)
-=======
         Использует Qdrant prefetch для параллельного поиска по dense и sparse векторам.
         Результаты объединяются и ранжируются Qdrant'ом.
 
@@ -216,4 +209,3 @@ class VectorStore:
             "chunk_type": point.payload.get("chunk_type", "text"),
             "metadata": point.payload.get("metadata", {}),
         }
->>>>>>> new_web

@@ -12,13 +12,12 @@ load_dotenv()
 class CreateIndex:
     def __init__(self):
         self.emb = Embedding()
-        self.file_path=os.getenv("FILE_PATH"),
         self.collection_name=os.getenv("QDRANT_COLLECTION"),
         self.index_file=os.getenv("INDEX_PATH"),
         self.recreate=False,
         self.chunking_threshold=os.getenv("CHUNK_THRESHOLD", 75)
 
-    def create_index(self):
+    def create_index(self, file_path=None, id=None):
         """
         Создаёт Qdrant-коллекцию и BM25 индекс для документа.
 
@@ -28,7 +27,7 @@ class CreateIndex:
         :param recreate: если True, удаляет существующую коллекцию и индекс перед созданием
         :param chunking_threshold: зарезервирован для будущей настройки чанкинга
         """
-        if not self.file_path:
+        if not file_path:
             raise ValueError("file_path не задан")
 
         emb = Embedding()
@@ -38,10 +37,10 @@ class CreateIndex:
             if self.index_file and os.path.exists(self.index_file):
                 os.remove(self.index_file)
         try:
-            processor = Processing(self.file_path)
-            chunks = processor.chunking()
+            processor = Processing()
+            chunks = processor.chunking(file_path, doc_id=id)
         except Exception as exc:
-            raise RuntimeError(f"Ошибка при обработке {self.file_path}: {exc}") from exc
+            raise RuntimeError(f"Ошибка при обработке {file_path}: {exc}") from exc
 
         if not chunks:
             return None

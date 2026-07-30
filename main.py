@@ -1,10 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from find import Find_answer
-from agent import Agent
-from embending import Embedding
 from index_documents import create_index
-import pickle
 
 
 class Question (BaseModel):
@@ -12,7 +9,7 @@ class Question (BaseModel):
 
 app = FastAPI()
 history_HYDE = []
-agent = Agent(max_context_messages=10)
+
 
 @app.get("/")
 async def root():
@@ -20,26 +17,12 @@ async def root():
 
 @app.post("/ask")
 async def ask(query: Question):
-    global history_HYDE
-    with open("bm25_index.pkl", "rb") as f:
-        bm25 = pickle.load(f)
-    finder = Find_answer(query.query, bm25_index=bm25, history=history_HYDE)
-    candidates = finder.find_answer()
-    if candidates:
-        # Опциональный реранжинг (берём топ-3)
-        best = finder.reranked(query.query, candidates)
-        # Генерируем ответ через агента
-        answer, sources = agent.response(query.query, best, return_sources=True)
-        # Обновляем историю (вопрос и ответ)
-        finder.update_history(query.query, answer)
-        history_HYDE = finder.history
-        return {"answer": answer, "sources": sources}
+    finder = Find_answer()
+    return {'answer': finder.find_answer(query.query)}
+    
 
 @app.post("/uploads/documents/{id}")
-async def load_documents():
-    create_index(recreate=True)
+async def load_documents(id: str):
+    create_index(file_path=None, id=id)
     return {"message": "Документы загружены и проиндексированы"}
 
-
-from index_documents import create_index
-create_index('C://Users/User/Desktop/p21/test/K-voprosu-razvitiya-sistem-monitoringa-kosmicheskogo-prostranstva-s-tselyu-obespecheniya-bezopasnosti-i-ustoychivogo-razvitiya-k.pdf')

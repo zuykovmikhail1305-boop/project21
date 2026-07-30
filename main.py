@@ -35,7 +35,7 @@ async def ask(query: Question):
         history_HYDE = finder.history
         return {"answer": answer, "sources": sources}
 
-@app.post("/load_documents")
+@app.post("/load_documents/index/{idx}")
 async def load_documents():
     create_index(recreate=True)
     return {"message": "Документы загружены и проиндексированы"}

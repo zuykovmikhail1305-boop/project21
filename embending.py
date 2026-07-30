@@ -134,3 +134,6 @@ class Embedding:
                 break
             print(f"Удалено {points_deleted} точек...")
         print(f"✅ Все точки удалены. Всего удалено: {points_deleted}")
+
+e = Embedding()
+e.delete_collection()

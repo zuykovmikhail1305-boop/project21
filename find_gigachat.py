@@ -130,7 +130,7 @@ class Find_answer():
             texts = []
 
             proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
-            nodes = proc.chunking(text=hyde)
+            nodes = proc.chunking(text=hyde, Hyde=True)
             chunks = [node.text for node in nodes[:max_chunks]]
             print(f"Разбито на {len(chunks)} чанков для поиска.")
 

@@ -22,7 +22,6 @@ class Find_answer():
         return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
     def __init__(self):
-        self.text = text
         self.history = []
 
         # Конфиг для HyDE
@@ -82,7 +81,7 @@ class Find_answer():
         ])
         return response.content
 
-    def find_answer(self, num_results=None, split_hypothesis=True, max_chunks=None, query=None):
+    def find_answer(self, num_results=None, max_chunks=None, query=None):
         """
         Основной метод поиска.
         :param num_results: количество финальных результатов
@@ -102,25 +101,19 @@ class Find_answer():
             all_search_lists = []
             texts = []
 
-            if split_hypothesis:
-                proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
-                nodes = proc.chunking(text=hyde)
-                # Берём не более max_chunks первых чанков
-                chunks = [node.text for node in nodes]
-                print(f"Разбито на {len(chunks)} чанков для поиска.")
-                for chunk in chunks:
-                    results = emb.hybrid_search(chunk)
-                    all_search_lists.append(results)
-                    for item in results or []:
-                        if isinstance(item, dict) and item.get("text"):
-                            texts.append(item["text"])
-            else:
-                result = emb.hybrid_search(hyde)
-                all_search_lists.append(result)
-                for item in result or []:
+            
+            proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
+            nodes = proc.chunking(text=hyde)
+            # Берём не более max_chunks первых чанков
+            chunks = [node.text for node in nodes]
+            print(f"Разбито на {len(chunks)} чанков для поиска.")
+            for chunk in chunks:
+                results = emb.hybrid_search(chunk)
+                all_search_lists.append(results)
+                for item in results or []:
                     if isinstance(item, dict) and item.get("text"):
                         texts.append(item["text"])
-
+           
             return texts if texts else all_search_lists
 
         except Exception as e:

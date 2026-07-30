@@ -118,7 +118,15 @@ class Embedding:
             print(f"Сохранено {min(i + batch_size, total)} из {total}")
         print(f"✅ Все {total} точек сохранены в коллекцию '{collection_name}'")
 
-    def get_chunks_by_doc_id(self, doc_id):
+    def get_chunks_by_doc_id(self, doc_id, text_key="text"):
+        """
+        Возвращает список текстов чанков, принадлежащих документу с указанным doc_id.
+
+        :param doc_id: идентификатор документа (хранится в metadata.doc_id)
+        :param text_key: ключ в payload, где хранится текст чанка (по умолчанию "text")
+        :param limit: размер батча для scroll (по умолчанию 100)
+        :return: list[str] – список текстовых фрагментов
+        """
         collection_name = self.collection_name
         filter_obj = models.Filter(
             must=[
@@ -129,21 +137,31 @@ class Embedding:
             ]
         )
 
-        all_points = []
+        all_texts = []
         offset = None
+
         while True:
             points, offset = self.client.scroll(
                 collection_name=collection_name,
                 offset=offset,
-                limit=None,
                 with_payload=True,
-                with_vectors=False,  # векторы не нужны, если только для вывода
+                limit=None,
+                with_vectors=False,
                 filter=filter_obj
             )
+
             if not points:
                 break
-            all_points.extend(points)
-        return all_points
+
+            for point in points:
+                # Извлекаем текст из payload
+                text = point.payload.get(text_key)
+                if text is not None and isinstance(text, str):
+                    all_texts.append(text)
+                else:
+                    pass
+
+        return all_texts
 
     def hybrid_search(self, query, limit=int(os.getenv('NUM_RESULTS'))):
         collection_name = self.collection_name

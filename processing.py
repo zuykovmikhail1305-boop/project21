@@ -20,9 +20,7 @@ class Processing():
             return default
         return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
-    def __init__(self, doc_path, doc_id=None):
-        self.original_path = doc_path
-        self.doc_id = doc_id
+    def __init__(self):
         self.pdf_path = None
         # Читаем переменные окружения с дефолтными значениями
         self.chunk_model = os.getenv("CHUNK_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
@@ -41,15 +39,15 @@ class Processing():
         convert(docx_path, pdf_path)
         return pdf_path
 
-    def parsing(self):
-        if not os.path.exists(self.original_path):
-            raise FileNotFoundError(f"Файл не найден: {self.original_path}")
+    def parsing(self, original_path, doc_id):
+        if not os.path.exists(original_path):
+            raise FileNotFoundError(f"Файл не найден: {original_path}")
 
-        if self.original_path.lower().endswith('.docx'):
-            self.pdf_path = self._convert_docx_to_pdf(self.original_path)
+        if original_path.lower().endswith('.docx'):
+            self.pdf_path = self._convert_docx_to_pdf(original_path)
             file_to_parse = self.pdf_path
         else:
-            file_to_parse = self.original_path
+            file_to_parse = original_path
 
         elements = partition(
             filename=file_to_parse,
@@ -75,7 +73,7 @@ class Processing():
                     "filename": el.metadata.filename if hasattr(el.metadata, 'filename') else None,
                     "filetype": el.metadata.filetype if hasattr(el.metadata, 'filetype') else None,
                     "languages": el.metadata.languages if hasattr(el.metadata, 'languages') else None,
-                    'document_id': self.doc_id
+                    'document_id': doc_id
                 }
             }
 
@@ -90,7 +88,7 @@ class Processing():
 
         return result
 
-    def chunking(self, text=None, threshold=None):
+    def chunking(self, text=None, threshold=None, doc_id=None, original_path=None):
         if threshold is None:
             threshold = self.chunk_threshold
 
@@ -114,7 +112,7 @@ class Processing():
             nodes = splitter.get_nodes_from_documents([doc])
             return nodes
 
-        parsed_elements = self.parsing()
+        parsed_elements = self.parsing(original_path, doc_id)
         if not parsed_elements:
             return []
 

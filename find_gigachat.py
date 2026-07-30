@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class Find_answer:
+class Find_answer():
     _cross_encoder = None
 
     @staticmethod
@@ -21,9 +21,9 @@ class Find_answer:
             return default
         return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
-    def __init__(self, text, history=None):
+    def __init__(self):
         self.text = text
-        self.history = history if history is not None else []
+        self.history = []
 
         # Конфиг для HyDE
         self.hyde_temperature = float()
@@ -82,7 +82,7 @@ class Find_answer:
         ])
         return response.content
 
-    def find_answer(self, num_results=None, split_hypothesis=True, max_chunks=None):
+    def find_answer(self, num_results=None, split_hypothesis=True, max_chunks=None, query=None):
         """
         Основной метод поиска.
         :param num_results: количество финальных результатов
@@ -95,11 +95,12 @@ class Find_answer:
             max_chunks = self.max_chunks
 
         try:
-            hyde = self.HYDE(self.text)
+            hyde = self.HYDE(query)
             print("Гипотетический документ:", hyde)
 
             emb = Embedding()
             all_search_lists = []
+            texts = []
 
             if split_hypothesis:
                 proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
@@ -110,11 +111,17 @@ class Find_answer:
                 for chunk in chunks:
                     results = emb.hybrid_search(chunk)
                     all_search_lists.append(results)
+                    for item in results or []:
+                        if isinstance(item, dict) and item.get("text"):
+                            texts.append(item["text"])
             else:
                 result = emb.hybrid_search(hyde)
                 all_search_lists.append(result)
+                for item in result or []:
+                    if isinstance(item, dict) and item.get("text"):
+                        texts.append(item["text"])
 
-            return all_search_lists
+            return texts if texts else all_search_lists
 
         except Exception as e:
             print(f"Ошибка при поиске: {e}")
@@ -148,3 +155,5 @@ class Find_answer:
 
     def clear_history(self):
         self.history = []
+
+    

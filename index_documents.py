@@ -12,7 +12,6 @@ load_dotenv()
 class CreateIndex:
     def __init__(self):
         self.emb = Embedding()
-     
         self.file_path=os.getenv("FILE_PATH"),
         self.collection_name=os.getenv("QDRANT_COLLECTION"),
         self.index_file=os.getenv("INDEX_PATH"),

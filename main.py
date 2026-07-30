@@ -35,7 +35,11 @@ async def ask(query: Question):
         history_HYDE = finder.history
         return {"answer": answer, "sources": sources}
 
-@app.post("/load_documents/index/{idx}")
+@app.post("/uploads/documents/{id}")
 async def load_documents():
     create_index(recreate=True)
     return {"message": "Документы загружены и проиндексированы"}
+
+
+from index_documents import create_index
+create_index('C://Users/User/Desktop/p21/test/K-voprosu-razvitiya-sistem-monitoringa-kosmicheskogo-prostranstva-s-tselyu-obespecheniya-bezopasnosti-i-ustoychivogo-razvitiya-k.pdf')

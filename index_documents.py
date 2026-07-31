@@ -13,7 +13,6 @@ class CreateIndex:
     def __init__(self):
         self.emb = Embedding()
         self.collection_name=os.getenv("QDRANT_COLLECTION"),
-        self.index_file=os.getenv("INDEX_PATH"),
         self.recreate=False,
         self.chunking_threshold=os.getenv("CHUNK_THRESHOLD", 75)
 
@@ -34,8 +33,6 @@ class CreateIndex:
 
         if self.recreate:
             emb.delete_collection(self.collection_name)
-            if self.index_file and os.path.exists(self.index_file):
-                os.remove(self.index_file)
         try:
             processor = Processing()
             chunks = processor.chunking(file_path, doc_id=id)

@@ -92,5 +92,4 @@ class RAGIndexResponse(BaseModel):
     """Результат индексации документа."""
 
     status: str = Field("ok", description="Статус операции: ok / error")
-    points_count: int = Field(0, description="Количество сохранённых точек в Qdrant")
     message: str = Field("", description="Сообщение о результате операции")

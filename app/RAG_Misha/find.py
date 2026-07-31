@@ -1,9 +1,8 @@
 """RAG Finder: гибридный поиск (HyDE + BM25 + Dense + Reranking) с использованием GigaChat."""
 
 from langchain_gigachat.chat_models import GigaChat
-from app.services.rag_embedder import Embedding
-from app.services.bm25_searcher import BM25Search
-from app.services.document_processor import Processing
+from app.RAG_Misha.embending import Embedding
+from app.RAG_Misha.processing import Processing
 from sentence_transformers import CrossEncoder
 from app.core.config import *
 import os
@@ -12,13 +11,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class Find_answer:
+class Find_answer():
     _cross_encoder = None
 
-    def __init__(self, text, bm25_index: BM25Search, history=None):
-        self.text = text
-        self.bm25 = bm25_index
-        self.history = history if history is not None else []
+    @staticmethod
+    def _env_to_bool(value, default=False):
+        if value is None:
+            return default
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+    def __init__(self):
+        self.history = []
 
         # Конфиг для HyDE
         self.hyde_temperature = float()
@@ -29,6 +32,12 @@ class Find_answer:
         self.top_k = int(TOP_RERANKED)
         self.limit_rrf = int(LIMIT_RRF)
         self.cross_encoder_model = CROSS_ENC
+        self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
+        self.local_files_only = self._env_to_bool(os.getenv("LOCAL_FILES_ONLY"), default=False)
+
+        if self.local_files_only:
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
         # Используем GigaChat для HyDE генерации
         self.client = GigaChat(
@@ -71,76 +80,6 @@ class Find_answer:
         ])
         return response.content
 
-    def _rrf_fusion_general(self, results_lists, limit=None, k=60):
-        """
-        Обобщённый RRF для любого числа списков результатов.
-        Каждый список должен содержать словари с ключом 'id'.
-        Ранг определяется позицией элемента в списке (начиная с 1).
-        Возвращает топ-limit элементов с добавленным полем 'rrf_score'.
-        """
-        if limit is None:
-            limit = self.limit_rrf
-
-        rrf_scores = {}
-        items_by_id = {}
-
-        for lst in results_lists:
-            for rank, item in enumerate(lst, start=1):
-                item_id = item["id"]
-                if item_id not in items_by_id:
-                    items_by_id[item_id] = item
-                rrf_scores[item_id] = rrf_scores.get(item_id, 0) + 1 / (rank + k)
-
-        sorted_ids = sorted(rrf_scores.keys(), key=lambda x: rrf_scores[x], reverse=True)
-        result = []
-        for idx in sorted_ids[:limit]:
-            item = items_by_id[idx]
-            item["rrf_score"] = rrf_scores[idx]
-            result.append(item)
-        return result
-
-    def find_answer(self, num_results=None, split_hypothesis=True, max_chunks=None):
-        """
-        Основной метод поиска.
-        :param num_results: количество финальных результатов
-        :param split_hypothesis: если True, разбивает HYDE-документ на чанки и ищет по каждому
-        :param max_chunks: максимальное число чанков (если split_hypothesis=True)
-        """
-        if num_results is None:
-            num_results = self.num_results
-        if max_chunks is None:
-            max_chunks = self.max_chunks
-
-        try:
-            hyde = self.HYDE(self.text)
-            print("Гипотетический документ:", hyde)
-
-            emb = Embedding()
-            all_search_lists = []
-
-            if split_hypothesis:
-                proc = Processing("")  # фиктивный путь, но мы не вызываем parsing
-                nodes = proc.chunking(text=hyde)
-                # Берём не более max_chunks первых чанков
-                chunks = [node.text for node in nodes[:max_chunks]]
-                print(f"Разбито на {len(chunks)} чанков для поиска.")
-                for chunk in chunks:
-                    dense_results = emb.dense_search(chunk, limit=20)
-                    sparse_results = self.bm25.search(chunk, limit=20)
-                    all_search_lists.append(dense_results)
-                    all_search_lists.append(sparse_results)
-            else:
-                dense_results = emb.dense_search(hyde, limit=20)
-                sparse_results = self.bm25.search(hyde, limit=20)
-                all_search_lists = [dense_results, sparse_results]
-
-            combined = self._rrf_fusion_general(all_search_lists, limit=num_results)
-            return combined
-
-        except Exception as e:
-            print(f"Ошибка при поиске: {e}")
-            return []
-
     def reranked(self, query, candidates, top_k=None):
         if top_k is None:
             top_k = self.top_k
@@ -148,7 +87,13 @@ class Find_answer:
         if not candidates:
             return []
         if Find_answer._cross_encoder is None:
-            Find_answer._cross_encoder = CrossEncoder(self.cross_encoder_model)
+            ce_kwargs = {
+                "local_files_only": self.local_files_only,
+            }
+            if self.model_cache_dir:
+                ce_kwargs["cache_folder"] = self.model_cache_dir
+
+            Find_answer._cross_encoder = CrossEncoder(self.cross_encoder_model, **ce_kwargs)
             print("Кросс-энкодер загружен.")
         pairs = [(query, cand['text']) for cand in candidates]
         rerank_scores = Find_answer._cross_encoder.predict(pairs)
@@ -157,9 +102,62 @@ class Find_answer:
         ranked = sorted(candidates, key=lambda x: x['rerank_score'], reverse=True)
         return ranked[:top_k]
 
+    
+    def find_answer(self, num_results=None, max_chunks=None, query=None, top_k=None):
+        """
+        Основной метод поиска.
+        :param num_results: количество финальных результатов
+        :param max_chunks: максимальное число чанков
+        :param top_k: количество лучших результатов после reranking
+        """
+        if num_results is None:
+            num_results = self.num_results
+        if max_chunks is None:
+            max_chunks = self.max_chunks
+        if top_k is None:
+            top_k = self.top_k
+
+        try:
+            if not query:
+                return []
+
+            hyde = self.HYDE(query)
+            print("Гипотетический документ:", hyde)
+
+            emb = Embedding()
+            candidates = []
+            texts = []
+
+            proc = Processing()  # фиктивный путь, но мы не вызываем parsing
+            nodes = proc.chunking(text=hyde, Hyde=True)
+            chunks = [node.text for node in nodes]
+            print(f"Разбито на {len(chunks)} чанков для поиска.")
+
+            for chunk in chunks:
+                results = emb.hybrid_search(chunk)
+                for item in results or []:
+                    if isinstance(item, dict) and item.get("text"):
+                        candidates.append(item)
+                        texts.append(item["text"])
+
+            if not candidates:
+                return []
+
+            reranked_results = self.reranked(query, candidates, top_k=num_results)
+            if reranked_results:
+                return reranked_results[:num_results]
+
+            return [{"text": t} for t in texts[:num_results]]
+
+        except Exception as e:
+            print(f"Ошибка при поиске: {e}")
+            return []
+
     def update_history(self, question, answer):
         self.history.append({"role": "user", "content": question})
         self.history.append({"role": "assistant", "content": answer})
 
     def clear_history(self):
         self.history = []
+
+    

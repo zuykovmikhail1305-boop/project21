@@ -76,6 +76,7 @@ dependencies = [
     "langchain-gigachat>=0.5.1",
     "pytest-asyncio>=1.4.0",
     "docforge>=0.1.0",
+    "fastembed>=0.8.0",
 ]
 
 [tool.uv.workspace]

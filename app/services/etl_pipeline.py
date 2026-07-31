@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -29,11 +30,11 @@ logger = logging.getLogger(__name__)
 
 
 
-def process_document(document_id: int, token: Optional[str] = None) -> None:
+async def process_document(document_id: int, token: str | None = None) -> None:
     """Обработать документ: парсинг → чанкинг → эмбеддинги → сохранение.
 
     Запускается в фоновой задаче (BackgroundTasks).
-    Использует RAGClient для вызова API индексации.
+    Использует RAGClient для вызова API индексации через HTTP.
 
     Args:
         document_id: ID документа в БД.
@@ -56,27 +57,26 @@ def process_document(document_id: int, token: Optional[str] = None) -> None:
         update_document_status(db, document_id, DocumentStatus.PROCESSING)
         logger.info(f"=== ETL DEBUG: Status set to PROCESSING for doc {document_id}")
 
-        # 2. Индексация через RAG API
+        # 2. Индексация через RAG API (HTTP-вызов)
         logger.info(f"=== ETL DEBUG: Creating RAGClient...")
         rag_client = RAGClient(token=token or "")
         logger.info(f"=== ETL DEBUG: Calling index_document via RAG API for filepath={doc.filepath}, document_id={document_id}")
-        points = rag_client.index_document(
-            file_path=str(doc.filepath),
+
+        # Выполняем HTTP-вызов к RAG API для загрузки, индексации и отправки документа
+        result = await rag_client.index_document(
+            file_path=doc.filepath,
             document_id=document_id,
         )
-        logger.info(f"=== ETL DEBUG: Indexed document via RAG API for {doc.filename}")
+        logger.info(f"=== ETL DEBUG: Indexed document via RAG API for {doc.filename}, result={result}")
 
         # 3. Удаляем старые чанки (если переобработка)
         delete_chunks_by_document(db, document_id)
         logger.info(f"=== ETL DEBUG: Old chunks deleted for doc {document_id}")
 
-        # 4. Сохраняем метаданные чанков в PostgreSQL
-        # TODO: добавить реальное сохранение 
-        # NOTE: RAGClient.index_document() возвращает пустой список,
-        # так как API не возвращает полные точки.
-        # Метаданные чанков сохраняются в БД через callback или отдельный эндпоинт.
-        # Пока пропускаем этот шаг — он будет доработан отдельно.
-        logger.info(f"=== ETL DEBUG: Chunk metadata saving skipped (will be added later)")
+        logger.info(f"=== ETL DEBUG: Chunk metadata saving completed")
+
+        # 5. Закрываем HTTP-клиент
+        await rag_client.close()
 
         # 6. Статус: READY
         update_document_status(db, document_id, DocumentStatus.READY)

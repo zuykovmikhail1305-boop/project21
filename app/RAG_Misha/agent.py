@@ -2,9 +2,7 @@
 
 from langchain_gigachat.chat_models import GigaChat
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import *
 
 
 class Agent:
@@ -15,7 +13,7 @@ class Agent:
 
         # Инициализируем GigaChat клиент через LangChain
         self.client = GigaChat(
-            credentials=os.getenv("GIGACHAT_CREDENTIALS", ""),
+            credentials=GIGACHAT_CREDENTIALS,
             model="GigaChat-2",
             temperature=self.agent_temperature,
             max_tokens=self.agent_max_tokens,

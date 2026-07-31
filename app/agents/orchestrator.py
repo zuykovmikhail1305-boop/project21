@@ -13,6 +13,7 @@ from app.agents.search_rag_agent import SearchRAGAgent
 from app.agents.summarizer_agent import SummarizerAgent
 from app.agents.analytics_agent import AnalyticsAgent
 from app.agents.artifact_generator import ArtifactGeneratorAgent
+from app.agents.rewrite_agent import RewriteAgent
 
 
 class AgentState(TypedDict):
@@ -26,6 +27,7 @@ class AgentState(TypedDict):
     summary_result: Optional[dict]
     analytics_result: Optional[dict]
     artifact_result: Optional[dict]  # результат генерации артефакта (v2)
+    rewrite_result: Optional[dict]  # результат рерайтинга через SummarizerAgent
     final_answer: Optional[str]
     citations: list[dict]
     error: Optional[str]
@@ -41,6 +43,7 @@ class AgentOrchestrator:
         self.router = RouterAgent()
         self.search_rag = SearchRAGAgent(token=token or "")
         self.summarizer = SummarizerAgent()
+        self.rewriter = RewriteAgent()
         self.analytics = AnalyticsAgent()
         self.artifact_gen = ArtifactGeneratorAgent(
             db_session=db_session,
@@ -65,6 +68,7 @@ class AgentOrchestrator:
         workflow.add_node("summarize", self._summarize)
         workflow.add_node("analyze", self._analyze)
         workflow.add_node("generate_artifact", self._generate_artifact)
+        workflow.add_node("rewrite", self._rewrite)
         workflow.add_node("finalize", self._finalize)
 
         # Старт
@@ -84,7 +88,8 @@ class AgentOrchestrator:
         )
 
         # После каждого агента → финализация
-        workflow.add_edge("search", "finalize")
+        workflow.add_edge("search", "rewrite")
+        workflow.add_edge("rewrite", "finalize")
         workflow.add_edge("summarize", "finalize")
         workflow.add_edge("analyze", "finalize")
         workflow.add_edge("generate_artifact", "finalize")
@@ -142,6 +147,33 @@ class AgentOrchestrator:
             logger.error("=== DIAG: Search exception: %s", e)
         return state
 
+    async def _rewrite(self, state: AgentState) -> AgentState:
+        """Узел: рерайтинг результата поиска через RewriteAgent (GigaChat).
+
+        Берёт search_result, форматирует чанки в контекст через _get_context_from_search(),
+        передаёт в RewriteAgent.rewrite() для рерайтинга в связный ответ.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            # Получаем контекст из search_result (уже есть в state)
+            document_text = await self._get_context_from_search(state)
+
+            # Передаём в RewriteAgent для рерайтинга
+            result = await self.rewriter.rewrite(
+                query=state["query"],
+                context=document_text,
+            )
+            state["rewrite_result"] = result.model_dump()
+            logger.info(
+                "=== DIAG: Rewrite result: answer_len=%d, n_citations=%d",
+                len(result.answer), len(result.citations),
+            )
+        except Exception as e:
+            state["error"] = f"Rewrite error: {e}"
+            logger.error("=== DIAG: Rewrite exception: %s", e)
+        return state
+
     async def _get_context_from_search(self, state: AgentState) -> str:
         """Получить контекст из поиска, если его ещё нет в state.
 
@@ -170,7 +202,7 @@ class AgentOrchestrator:
         if chunks:
             context_parts = []
             for chunk in chunks[:10]:
-                content = chunk.get("content", "")
+                content = chunk.get("text") or chunk.get("content") or ""
                 doc_id = chunk.get("document_id", "?")
                 chunk_idx = chunk.get("chunk_index", "?")
                 score = chunk.get("rerank_score", chunk.get("score", 0))
@@ -298,7 +330,12 @@ class AgentOrchestrator:
         logger.info("=== DIAG: _finalize: route=%s, has_search=%s, has_summary=%s, has_analytics=%s, has_artifact=%s, error=%s",
                     route, has_search, has_summary, has_analytics, has_artifact, error)
 
-        if route == "search" and state.get("search_result"):
+        if route == "search" and state.get("rewrite_result"):
+            rewrite = state["rewrite_result"]
+            state["final_answer"] = rewrite["answer"]
+            logger.info("=== DIAG: _finalize using rewrite_result.answer (len=%d)", len(state["final_answer"]))
+        elif route == "search" and state.get("search_result"):
+            # Fallback: если рерайтинг не сработал, используем сырой ответ
             sr = state["search_result"]
             state["final_answer"] = sr["answer"]  # type: ignore[index]
             logger.info("=== DIAG: _finalize using search_result.answer (len=%d)", len(state["final_answer"]))
@@ -412,6 +449,7 @@ class AgentOrchestrator:
             "summary_result": None,
             "analytics_result": None,
             "artifact_result": None,
+            "rewrite_result": None,
             "final_answer": None,
             "citations": [],
             "error": None,
@@ -431,6 +469,7 @@ class AgentOrchestrator:
             t2 = time.time()
             if route == "search":
                 initial_state = await self._search(initial_state)
+                initial_state = await self._rewrite(initial_state)
             elif route == "summarize":
                 initial_state = await self._summarize(initial_state)
             elif route == "analyze":

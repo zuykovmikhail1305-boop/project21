@@ -25,7 +25,7 @@ class RAGClient:
         self,
         base_url: str | None = None,
         token: str | None = None,
-        timeout: float = 120.0,
+        timeout: float = 500.0,
     ):
         self.base_url = (base_url or config.SELF_API_URL).rstrip("/")
         self.token = token or ""

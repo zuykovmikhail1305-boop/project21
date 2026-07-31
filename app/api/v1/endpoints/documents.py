@@ -129,7 +129,7 @@ async def process_document_background(document_id: int, token: str = ""):
         token: JWT-токен для авторизации HTTP-вызова к RAG API.
     """
     from app.services.etl_pipeline import process_document
-    await process_document(document_id, token=token)
+    await process_document(document_id)
 
 
 @router.delete("/{document_id}", status_code=204)

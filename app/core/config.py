@@ -2,6 +2,7 @@ import binascii
 import base64
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 
@@ -167,3 +168,86 @@ LIMIT_RRF = os.getenv('LIMIT_RRF', '20') #
 NUM_RESULTS = os.getenv('NUM_RESULTS', '20') #
 TOP_RERANKED = os.getenv('TOP_RERANKED', '5') #
 CROSS_ENC = os.getenv('CROSS_ENC', 'DiTy/cross-encoder-russian-msmarco') #
+
+
+# === Async Database ===
+ASYNC_DATABASE_URL = os.getenv(
+    "ASYNC_DATABASE_URL",
+    DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1) if "postgresql" in DATABASE_URL else DATABASE_URL
+)
+
+async_engine = None
+AsyncSessionLocal = None
+
+
+def _build_async_engine():
+    global async_engine, AsyncSessionLocal
+    if async_engine is not None and AsyncSessionLocal is not None:
+        return async_engine, AsyncSessionLocal
+
+    try:
+        if "sqlite" in ASYNC_DATABASE_URL:
+            # SQLite с aiosqlite
+            async_engine = create_async_engine(
+                ASYNC_DATABASE_URL.replace("sqlite://", "sqlite+aiosqlite://", 1),
+                echo=False,
+            )
+        else:
+            async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False, pool_size=5, max_overflow=10)
+
+        AsyncSessionLocal = async_sessionmaker(
+            bind=async_engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+    except Exception as e:
+        logger = __import__('logging').getLogger(__name__)
+        logger.warning(f"Failed to create async engine: {e}")
+        async_engine = None
+        AsyncSessionLocal = None
+
+    return async_engine, AsyncSessionLocal
+
+
+class AsyncDatabaseSession:
+    """Async DB session that works both as async context manager and FastAPI dependency.
+
+    Usage as context manager:
+        async with AsyncDatabaseSession() as db:
+            ...
+
+    Usage as FastAPI dependency:
+        async def get_db() -> AsyncSession:
+            async with AsyncDatabaseSession() as db:
+                yield db
+    """
+
+    def __init__(self) -> None:
+        self._session: AsyncSession | None = None
+
+    async def __aenter__(self) -> AsyncSession:
+        _, local_session = _build_async_engine()
+        if local_session is None:
+            raise RuntimeError("Async database is not available.")
+        self._session = local_session()
+        return self._session
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
+    ) -> None:
+        if self._session is not None:
+            await self._session.close()
+            self._session = None
+
+
+# Keep the original generator-based function for FastAPI Depends compatibility
+async def get_async_db():
+    """Async generator for async DB session (FastAPI dependency).
+
+    Usage: db = Depends(get_async_db)
+    """
+    async with AsyncDatabaseSession() as db:
+        yield db

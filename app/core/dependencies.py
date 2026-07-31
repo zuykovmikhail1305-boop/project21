@@ -36,8 +36,17 @@ def get_llm_provider():
 
 def get_embedder():
     """Get embedding service."""
-    from app.services.embedder import EmbedderService
-    return EmbedderService(
+    from app.services.embedder import AsyncEmbedder
+    return AsyncEmbedder(
         model_name=config.EMBEDDING_MODEL,
         device=config.EMBEDDING_DEVICE,
+    )
+
+
+async def get_async_qdrant_client():
+    """Get async Qdrant client."""
+    from qdrant_client import AsyncQdrantClient
+    return AsyncQdrantClient(
+        host=config.QDRANT_HOST,
+        port=config.QDRANT_PORT,
     )

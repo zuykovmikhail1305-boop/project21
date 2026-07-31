@@ -1,59 +1,67 @@
-"""Embedder Service - совместимая версия для старого кода (обёртка над rag_embedder.py)."""
+"""Асинхронный эмбеддер.
 
-from app.services.rag_embedder import Embedding
-import os
-from dotenv import load_dotenv
+Использует SentenceTransformer в thread pool (CPU-bound).
+"""
 
-from app.core import config
-import os
-from dotenv import load_dotenv
-load_dotenv()
+from __future__ import annotations
 
-class EmbedderService:
-    """Embedding service - обёртка для обратной совместимости."""
+import asyncio
+import logging
+from typing import Sequence
+
+from sentence_transformers import SentenceTransformer
+
+from app.core.config import EMBEDDING_MODEL, EMBEDDING_DEVICE
+
+logger = logging.getLogger(__name__)
+
+
+class AsyncEmbedder:
+    """Асинхронный эмбеддер.
+
+    SentenceTransformer.encode() — CPU-bound операция,
+    выполняется в thread pool для незаблокировки event loop.
+    """
 
     def __init__(
         self,
-        model_name: str = str(os.getenv('EMB_MODEL')),
-        device: str = "cpu",
-        provider: Optional[object] = None,
-    ):
+        model_name: str = EMBEDDING_MODEL,
+        device: str = EMBEDDING_DEVICE,
+    ) -> None:
         self.model_name = model_name
         self.device = device
-        self._model = None
-        self._provider = provider
+        self._model: SentenceTransformer | None = None
 
-    def _get_provider(self):
-        """Ленивая инициализация провайдера LLM для эмбеддингов.
+    def _load_model(self) -> SentenceTransformer:
+        """Load model synchronously (called in thread pool)."""
+        if self._model is None:
+            logger.info(f"Loading embedding model: {self.model_name} on {self.device}")
+            self._model = SentenceTransformer(self.model_name, device=self.device)
+        return self._model
 
-        GigaChat embeddings требуют оплаты (402 Payment Required).
-        По умолчанию используем sentence-transformers (локально).
+    async def embed(self, text: str) -> list[float]:
+        """Embed a single text asynchronously."""
+        loop = asyncio.get_event_loop()
+        model = await loop.run_in_executor(None, self._load_model)
+        vector = await loop.run_in_executor(
+            None, model.encode, text
+        )
+        return vector.tolist()
+
+    async def embed_batch(self, texts: Sequence[str]) -> list[list[float]]:
+        """Embed a batch of texts asynchronously.
+
+        Использует batch-encode SentenceTransformer для эффективности.
         """
-        return None  # GigaChat embeddings не используются из-за оплаты
+        loop = asyncio.get_event_loop()
+        model = await loop.run_in_executor(None, self._load_model)
+        vectors = await loop.run_in_executor(
+            None, lambda: model.encode(texts, show_progress_bar=False)
+        )
+        return [v.tolist() for v in vectors]
 
-    def _embed_with_gigachat(self, text: str) -> list[float]:
-        """Получить эмбеддинг через GigaChat."""
-        provider = self._get_provider()
-        if provider is None:
-            raise RuntimeError("GigaChat provider is not configured")
-
-        try:
-            return asyncio.run(provider.generate_embeddings(text))
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            try:
-                return loop.run_until_complete(provider.generate_embeddings(text))
-            finally:
-                loop.close()
-
-    def _load_model(self):
-        """Загрузить модель (для совместимости)."""
-        pass
-
-    def embed(self, text: str):
-        """Создать эмбеддинг для текста."""
-        return self._embedding.encode_dense(text)
-
-    def embed_batch(self, texts: list):
-        """Создать эмбеддинги для списка текстов."""
-        return [self.embed(text) for text in texts]
+    @property
+    def vector_size(self) -> int:
+        """Get the embedding vector size."""
+        model = self._load_model()
+        return model.get_sentence_embedding_dimension()

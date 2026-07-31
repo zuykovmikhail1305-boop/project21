@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Report Builder — CorpAI Intelligence{% endblock %}
+
+{% block content %}
+<div class="h-full overflow-y-auto scrollbar-thin px-gutter py-6">
+    <!-- Header & Breadcrumbs -->
+    <header class="mb-8">
+        <nav class="flex items-center text-caption text-outline mb-2" aria-label="Breadcrumb">
+            <a href="/dashboard" class="hover:text-primary transition-colors">Projects</a>
+            <span class="material-symbols-outlined text-icon-xs mx-2" aria-hidden="true">chevron_right</span>
+            <span class="text-on-surface-variant">Q4 Strategy</span>
+            <span class="material-symbols-outlined text-icon-xs mx-2" aria-hidden="true">chevron_right</span>
+            <span class="text-primary font-medium">Report Builder</span>
+        </nav>
+        <h1 class="text-headline-lg font-bold text-on-surface tracking-tight">Prepare New Intelligence Report</h1>
+        <p class="text-body-sm text-on-surface-variant mt-1">Configure sources, structure, and AI synthesis parameters</p>
+    </header>
+
+    <!-- Progress Tracker -->
+    <div class="mb-10 max-w-wide">
+        <div class="relative flex items-center justify-between">
+            <div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-container-highest -translate-y-1/2 z-0"></div>
+            <div class="absolute top-1/2 left-0 w-2/3 h-0.5 bg-primary -translate-y-1/2 z-0 transition-all duration-450"></div>
+
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm border-4 border-background">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">check</span>
+                </div>
+                <span class="mt-2 text-label-mono uppercase text-primary font-bold">Select Sources</span>
+            </div>
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm border-4 border-background">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">check</span>
+                </div>
+                <span class="mt-2 text-label-mono uppercase text-primary font-bold">Define Structure</span>
+            </div>
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm border-4 border-background ring-4 ring-primary/20 ai-pulse">
+                    <span class="material-symbols-outlined" aria-hidden="true">auto_fix_high</span>
+                </div>
+                <span class="mt-2 text-label-mono uppercase text-primary font-bold">AI Synthesis</span>
+            </div>
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-surface-container-highest text-outline flex items-center justify-center border-4 border-background">
+                    <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">visibility</span>
+                </div>
+                <span class="mt-2 text-label-mono uppercase text-outline">Review</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Builder Layout -->
+    <div class="grid grid-cols-12 gap-gutter items-start">
+        <!-- Configuration Panel (Left) -->
+        <section class="col-span-12 lg:col-span-4 space-y-6" aria-label="Configuration">
+            <div class="spatial-container">
+                <h2 class="text-headline-sm font-bold mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-icon-sm" aria-hidden="true">tune</span>
+                    Configuration
+                </h2>
+
+                <!-- Data Sources -->
+                <div class="mb-8">
+                    <label class="block text-label-mono uppercase tracking-widest text-outline mb-3">Data Sources</label>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1.5 rounded-full bg-primary text-on-primary text-caption font-medium flex items-center gap-2 cursor-pointer transition-all hover:brightness-110">
+                            <span class="material-symbols-outlined text-icon-xs" aria-hidden="true">cloud_done</span>
+                            Sber Disk
+                            <span class="material-symbols-outlined text-icon-xs cursor-pointer" aria-hidden="true">close</span>
+                        </span>
+                        <span class="px-3 py-1.5 rounded-full bg-primary text-on-primary text-caption font-medium flex items-center gap-2 cursor-pointer transition-all hover:brightness-110">
+                            <span class="material-symbols-outlined text-icon-xs" aria-hidden="true">analytics</span>
+                            Market Analytics
+                            <span class="material-symbols-outlined text-icon-xs cursor-pointer" aria-hidden="true">close</span>
+                        </span>
+                        <span class="px-3 py-1.5 rounded-full bg-primary text-on-primary text-caption font-medium flex items-center gap-2 cursor-pointer transition-all hover:brightness-110">
+                            <span class="material-symbols-outlined text-icon-xs" aria-hidden="true">database</span>
+                            Internal CRM
+                            <span class="material-symbols-outlined text-icon-xs cursor-pointer" aria-hidden="true">close</span>
+                        </span>
+                        <button class="px-3 py-1.5 rounded-full border border-dashed border-outline-variant text-outline text-caption font-medium hover:bg-surface-hover transition-colors">
+                            + Add More
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Report Type -->
+                <div class="mb-8">
+                    <label class="block text-label-mono uppercase tracking-widest text-outline mb-3">Report Type</label>
+                    <div class="relative">
+                        <select class="w-full bg-surface-elevated border border-outline-variant/30 rounded-sm py-2.5 px-4 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-border-focus outline-none appearance-none">
+                            <option>Презентация</option>
+                            <option selected>Текстовый отчет</option>
+                            <option>Интерактивный отчет</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline text-icon-sm" aria-hidden="true">expand_more</span>
+                    </div>
+                </div>
+
+                <!-- Depth of Analysis -->
+                <div class="mb-10">
+                    <label class="block text-label-mono uppercase tracking-widest text-outline mb-3">Depth of Analysis</label>
+                    <input type="range" min="1" max="5" value="3" class="w-full" aria-label="Depth of Analysis" />
+                    <div class="flex justify-between text-caption text-outline mt-1">
+                        <span>Quick</span>
+                        <span>Deep</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col gap-3 pt-4 border-t border-outline-variant/10">
+                    <button class="w-full bg-primary text-on-primary py-4 rounded-lg font-bold text-body-md shadow-sm hover:bg-primary-hover active:bg-primary-active transition-all duration-150 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">rocket_launch</span>
+                        Generate Draft
+                    </button>
+                    <button class="w-full border border-primary text-primary py-4 rounded-lg font-bold text-body-md hover:bg-surface-hover active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-icon-sm" aria-hidden="true">bookmark</span>
+                        Save Template
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Preview / Workspace (Right) -->
+        <section class="col-span-12 lg:col-span-8 space-y-6" aria-label="Synthesis Workspace">
+            <div class="spatial-container h-full flex flex-col overflow-hidden relative">
+                <!-- Subtle Scanning Effect -->
+                <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                    <div class="ai-scan w-full opacity-10" style="height:1px;background:linear-gradient(90deg,transparent,#006b1d,transparent);"></div>
+                </div>
+
+                <div class="pb-4 flex justify-between items-center z-10">
+                    <h2 class="text-headline-sm font-bold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary text-icon-sm" aria-hidden="true">insights</span>
+                        Synthesis Workspace
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-primary ai-pulse" role="status" aria-label="AI Active"></span>
+                        <span class="text-label-mono uppercase text-primary font-bold">AI Active</span>
+                    </div>
+                </div>
+
+                <div class="glow-line mb-6"></div>
+
+                <div class="flex-grow flex flex-col lg:flex-row gap-8 z-10">
+                    <!-- AI Synthesis Visualization -->
+                    <div class="flex-1 flex flex-col items-center justify-center relative min-h-[400px]">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-[300px] h-[300px] rounded-full border border-dashed border-primary/20 animate-[spin_20s_linear_infinite]"></div>
+                            <div class="absolute w-[200px] h-[200px] rounded-full border border-dashed border-secondary/20 animate-[spin_15s_linear_infinite_reverse]"></div>
+                        </div>
+
+                        <!-- Central Sphere -->
+                        <div class="relative z-20 group">
+                            <div class="absolute inset-0 bg-primary/20 blur-lg rounded-full scale-150 opacity-50 group-hover:opacity-100 transition-opacity duration-250"></div>
+                            <div class="w-48 h-48 rounded-full bg-primary-container/30 ai-pulse flex items-center justify-center">
+                                <span class="material-symbols-outlined text-5xl text-primary" aria-hidden="true">auto_awesome</span>
+                            </div>
+                        </div>
+                        <div class="mt-8 text-center">
+                            <div class="text-headline-sm font-bold text-primary mb-1">Synthesizing...</div>
+                            <p class="text-body-md text-on-surface-variant max-w-xs mx-auto">Connecting data nodes and generating structural cross-references</p>
+                        </div>
+
+                        <!-- Floating document icons -->
+                        <div class="absolute top-10 left-10 p-3 bg-surface-elevated shadow-md rounded-lg border border-primary/10 animate-bounce">
+                            <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1" aria-hidden="true">description</span>
+                        </div>
+                        <div class="absolute bottom-20 right-10 p-3 bg-surface-elevated shadow-md rounded-lg border border-primary/10 animate-bounce" style="animation-delay:0.5s">
+                            <span class="material-symbols-outlined text-secondary" style="font-variation-settings:'FILL' 1" aria-hidden="true">table_chart</span>
+                        </div>
+                    </div>
+
+                    <!-- Assets in Process -->
+                    <div class="w-full lg:w-72 flex flex-col gap-4">
+                        <h3 class="text-label-mono uppercase tracking-widest text-outline">Assets in Process</h3>
+                        <div class="space-y-4">
+                            <!-- Asset Item -->
+                            <div class="p-4 bg-surface-subtle rounded-lg">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="p-2 bg-error-container/30 text-error rounded" aria-hidden="true">
+                                        <span class="material-symbols-outlined text-icon-sm">picture_as_pdf</span>
+                                    </div>
+                                    <div class="truncate">
+                                        <div class="text-body-sm font-bold truncate">market_trends.pdf</div>
+                                        <div class="text-caption text-outline">9.2 MB • Processing</div>
+                                    </div>
+                                </div>
+                                <div class="h-1 w-full bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[75%] transition-all duration-500"></div>
+                                </div>
+                            </div>
+
+                            <!-- Asset Item -->
+                            <div class="p-4 bg-surface-subtle rounded-lg">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="p-2 bg-success-container/30 text-success rounded" aria-hidden="true">
+                                        <span class="material-symbols-outlined text-icon-sm">table_view</span>
+                                    </div>
+                                    <div class="truncate">
+                                        <div class="text-body-sm font-bold truncate">financial_q3.xlsx</div>
+                                        <div class="text-caption text-outline">4.5 MB • Completed</div>
+                                    </div>
+                                    <span class="material-symbols-outlined text-primary ml-auto text-icon-sm" aria-hidden="true">check_circle</span>
+                                </div>
+                                <div class="h-1 w-full bg-primary rounded-full"></div>
+                            </div>
+
+                            <!-- Asset Item -->
+                            <div class="p-4 bg-surface-subtle rounded-lg">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="p-2 bg-information-container/30 text-information rounded" aria-hidden="true">
+                                        <span class="material-symbols-outlined text-icon-sm">description</span>
+                                    </div>
+                                    <div class="truncate">
+                                        <div class="text-body-sm font-bold truncate">strategy_brief.docx</div>
+                                        <div class="text-caption text-outline">1.2 MB • Queued</div>
+                                    </div>
+                                </div>
+                                <div class="h-1 w-full bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[15%]"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto p-4 bg-primary/5 rounded-lg border border-dashed border-primary/30 flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-hover transition-colors">
+                            <span class="material-symbols-outlined text-primary text-icon-sm" aria-hidden="true">add_circle</span>
+                            <span class="text-label-mono uppercase text-primary font-bold">Inject Context</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Animate progress bars intermittently
+        const bars = document.querySelectorAll('.h-full.bg-primary');
+        setInterval(() => {
+            bars.forEach(bar => {
+                const currentWidth = parseInt(bar.style.width) || 0;
+                if (currentWidth < 100 && currentWidth > 0) {
+                    const increment = Math.floor(Math.random() * 5);
+                    bar.style.width = Math.min(currentWidth + increment, 100) + '%';
+                }
+            });
+        }, 3000);
+
+        // Button active state
+        const primaryBtn = document.querySelector('button.bg-primary');
+        if (primaryBtn) {
+            primaryBtn.addEventListener('click', () => {
+                primaryBtn.classList.add('scale-95');
+                setTimeout(() => primaryBtn.classList.remove('scale-95'), 100);
+            });
+        }
+    });
+</script>
+{% endblock %}

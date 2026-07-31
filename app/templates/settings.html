@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки — CorpAI Intelligence{% endblock %}
+
+{% block content %}
+<div class="h-full overflow-y-auto scrollbar-thin px-gutter py-6">
+    <div class="mb-6">
+        <h1 class="text-headline-md font-bold text-on-surface">Настройки</h1>
+        <p class="text-body-sm text-on-surface-variant mt-1">Управление профилем и параметрами системы</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+        <!-- Profile Section -->
+        <div class="spatial-container">
+            <h2 class="text-headline-sm font-bold mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-icon-sm" aria-hidden="true">person</span>
+                Профиль
+            </h2>
+            <form id="profile-form" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-body-sm font-medium text-on-surface-variant mb-1.5">Имя пользователя</label>
+                    <input type="text" id="username" name="username"
+                           class="w-full px-4 py-2.5 rounded-sm border border-outline-variant bg-surface/50 focus:border-border-focus focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150 text-body-md"
+                           placeholder="Ваше имя">
+                </div>
+                <div>
+                    <label for="email" class="block text-body-sm font-medium text-on-surface-variant mb-1.5">Email</label>
+                    <input type="email" id="email" name="email"
+                           class="w-full px-4 py-2.5 rounded-sm border border-outline-variant bg-surface/50 focus:border-border-focus focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150 text-body-md"
+                           placeholder="email@company.ru">
+                </div>
+                <button type="submit" class="px-4 py-2.5 bg-primary text-on-primary rounded-lg font-medium text-button hover:bg-primary-hover transition-all duration-150">
+                    Сохранить
+                </button>
+            </form>
+        </div>
+
+        <!-- Security Section -->
+        <div class="spatial-container">
+            <h2 class="text-headline-sm font-bold mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-icon-sm" aria-hidden="true">lock</span>
+                Безопасность
+            </h2>
+            <form id="security-form" class="space-y-4">
+                <div>
+                    <label for="current_password" class="block text-body-sm font-medium text-on-surface-variant mb-1.5">Текущий пароль</label>
+                    <input type="password" id="current_password" name="current_password"
+                           class="w-full px-4 py-2.5 rounded-sm border border-outline-variant bg-surface/50 focus:border-border-focus focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150 text-body-md">
+                </div>
+                <div>
+                    <label for="new_password" class="block text-body-sm font-medium text-on-surface-variant mb-1.5">Новый пароль</label>
+                    <input type="password" id="new_password" name="new_password"
+                           class="w-full px-4 py-2.5 rounded-sm border border-outline-variant bg-surface/50 focus:border-border-focus focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-150 text-body-md">
+                </div>
+                <button type="submit" class="px-4 py-2.5 bg-primary text-on-primary rounded-lg font-medium text-button hover:bg-primary-hover transition-all duration-150">
+                    Сменить пароль
+                </button>
+            </form>
+        </div>
+
+        <!-- Theme Section -->
+        <div class="spatial-container">
+            <h2 class="text-headline-sm font-bold mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-icon-sm" aria-hidden="true">palette</span>
+                Тема
+            </h2>
+            <div class="space-y-4">
+                <p class="text-body-sm text-on-surface-variant">Выберите оформление интерфейса</p>
+                <div class="flex gap-3">
+                    <button id="theme-light" class="flex-1 p-4 rounded-lg border-2 border-primary bg-primary/5 text-center transition-all">
+                        <span class="material-symbols-outlined text-icon-md text-primary mb-2">light_mode</span>
+                        <p class="text-body-sm font-medium text-primary">Светлая</p>
+                    </button>
+                    <button id="theme-dark" class="flex-1 p-4 rounded-lg border-2 border-outline-variant text-center hover:border-primary/30 transition-all">
+                        <span class="material-symbols-outlined text-icon-md text-on-surface-variant mb-2">dark_mode</span>
+                        <p class="text-body-sm font-medium text-on-surface-variant">Тёмная</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Theme selection
+    document.getElementById('theme-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        document.getElementById('theme-light').className = 'flex-1 p-4 rounded-lg border-2 border-primary bg-primary/5 text-center transition-all';
+        document.getElementById('theme-dark').className = 'flex-1 p-4 rounded-lg border-2 border-outline-variant text-center hover:border-primary/30 transition-all';
+    });
+
+    document.getElementById('theme-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        document.getElementById('theme-dark').className = 'flex-1 p-4 rounded-lg border-2 border-primary bg-primary/5 text-center transition-all';
+        document.getElementById('theme-light').className = 'flex-1 p-4 rounded-lg border-2 border-outline-variant text-center hover:border-primary/30 transition-all';
+    });
+
+    // Set initial theme state
+    if (localStorage.getItem('theme') === 'dark') {
+        document.getElementById('theme-dark').click();
+    }
+</script>
+{% endblock %}

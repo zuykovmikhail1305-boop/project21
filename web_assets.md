@@ -1,0 +1,8 @@
+I've generated the web deployment assets for **CorpAI** based on the branding and visual style of your landing page.
+
+### Assets Produced:
+*   **Favicon (A high-quality, professional favicon for a corporate AI intelligence platform named CorpAI. The design features a minimalist, geometric 'pulse' or 'node' symbol in vibrant Sber green (#21A038) centered on a deep, dark emerald-to-black gradient background that fills the entire square frame edge-to-edge. No borders, no rounded corners, no text. The aesthetic is futuristic, secure, and technological.)**: A minimalist, geometric node symbol in Sber green on a deep dark gradient background.
+*   **Apple Touch Icon (A polished Apple touch icon for CorpAI. The design features a minimalist, glowing green intelligence node symbol representing secure corporate data. The background is a full-bleed, rich dark green gradient with subtle procedural texture, filling the entire canvas to the edges. High contrast, sharp geometric lines, premium enterprise software feel. No containing shapes or margins.)**: A polished, high-contrast intelligence node symbol for mobile home screens.
+*   **Web Manifest (manifest.json)**: A standard `manifest.json` file defining the app's name, icons, and theme colors for PWA installation.
+
+These assets ensure a consistent brand experience from the browser tab to the mobile home screen. Let me know if you'd like to refine the icon designs or add more metadata to the manifest!

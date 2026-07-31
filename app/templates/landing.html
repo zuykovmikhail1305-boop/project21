@@ -1,0 +1,433 @@
+<!DOCTYPE html><html class="scroll-smooth" lang="ru" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>CorpAI — Интеллект под защитой Сбера</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&amp;family=Murecho:wght@400;700&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#f9f9f9",
+                        "tertiary-fixed": "#61fccb",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#3cdfb0",
+                        "surface-container": "#eeeeee",
+                        "on-tertiary-fixed-variant": "#00513d",
+                        "tertiary": "#006950",
+                        "background": "#f9f9f9",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-secondary-container": "#496f00",
+                        "on-tertiary-container": "#f5fff8",
+                        "on-primary-container": "#f7fff1",
+                        "primary": "#006b1d",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2f3131",
+                        "surface-variant": "#e2e2e2",
+                        "secondary-fixed-dim": "#95da07",
+                        "primary-fixed-dim": "#68df6e",
+                        "secondary": "#456800",
+                        "on-background": "#1a1c1c",
+                        "on-error-container": "#93000a",
+                        "outline": "#6e7b6a",
+                        "on-secondary-fixed": "#121f00",
+                        "inverse-on-surface": "#f0f1f1",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "outline-variant": "#bdcab8",
+                        "on-tertiary-fixed": "#002117",
+                        "tertiary-container": "#008566",
+                        "surface-dim": "#dadada",
+                        "surface-container-high": "#e8e8e8",
+                        "on-primary-fixed": "#002204",
+                        "secondary-fixed": "#aff834",
+                        "primary-container": "#008728",
+                        "primary-fixed": "#84fc87",
+                        "on-surface": "#1a1c1c",
+                        "on-surface-variant": "#3e4a3c",
+                        "surface-tint": "#006e1e",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed-variant": "#005315",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#334f00",
+                        "surface": "#f9f9f9",
+                        "inverse-primary": "#68df6e",
+                        "surface-container-low": "#f3f3f4",
+                        "secondary-container": "#aff834"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Google Sans"],
+                        "display": ["Google Sans"],
+                        "body": ["Google Sans"],
+                        "label": ["Murecho"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+        .hero-title {
+            background: linear-gradient(to bottom, #ffffff 30%, #a3f7b5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glass-nav {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.7);
+        }
+        .circuit-line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 5s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: 0; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Header Overlay -->
+<header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 glass-nav border-b border-outline-variant/30 py-4">
+<div class="max-w-7xl mx-auto px-6 lg:px-10 h-20 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="text-primary size-8">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<span class="text-on-surface text-2xl font-bold tracking-tight">CorpAI</span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant hover:text-primary transition-colors text-sm font-medium" href="#demo">Возможности</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-sm font-medium" href="#features">Технологии</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-sm font-medium" href="#architecture">Архитектура</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-sm font-medium" href="#security">Безопасность</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-primary/20">
+                    Начать работу
+                </button>
+</div>
+</div>
+</header>
+<!-- Hero Section -->
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+<threejs-scene class="absolute inset-0 w-full h-full z-0" src="{{DATA:ANIMATION:ANIMATION_3}}"></threejs-scene>
+<div class="relative z-10 container mx-auto px-6 text-center">
+<h1 class="hero-title text-8xl md:text-[12rem] font-black leading-none tracking-tighter mb-4 opacity-90 font-headline" style="background: linear-gradient(rgb(0, 107, 29) 0%, rgb(60, 223, 176) 100%) text; -webkit-text-fill-color: transparent;">
+                CorpAI
+            </h1>
+<div class="max-w-3xl mx-auto space-y-8">
+<h2 class="text-2xl md:text-3xl font-light tracking-wide text-on-surface">
+                    Интеллект под защитой <span class="font-bold text-secondary-fixed">Сбера</span>. 
+                    <br class="hidden md:block"> Управление корпоративными данными на Sber Disk.
+                </h2>
+<div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+<button class="w-full sm:w-auto px-10 py-5 bg-primary text-white rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-transform flex items-center justify-center gap-3 shadow-2xl shadow-primary/40">
+<span class="material-symbols-outlined" data-icon="rocket_launch">rocket_launch</span>
+                        Развернуть агента
+                    </button>
+<button class="w-full sm:w-auto px-10 py-5 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-xl font-bold text-lg hover:bg-white/20 transition-all">
+                        Запросить демо
+                    </button>
+</div>
+</div>
+</div>
+<!-- Scroll Indicator -->
+<div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/50 animate-bounce">
+<span class="text-[10px] uppercase tracking-[0.2em] font-bold">Листайте</span>
+<span class="material-symbols-outlined" data-icon="expand_more">expand_more</span>
+</div>
+</section>
+<!-- Demo Section: Chat Interface -->
+<section class="py-24 bg-surface relative overflow-hidden" id="demo">
+<div class="container mx-auto px-6">
+<div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+<div class="max-w-2xl">
+<h3 class="text-primary font-bold text-sm uppercase tracking-widest mb-4">Интерфейс</h3>
+<h2 class="text-4xl md:text-5xl font-bold text-on-surface leading-tight">
+                        Единое окно в ваши знания
+                    </h2>
+</div>
+<div class="p-1 bg-surface-container rounded-xl flex">
+<button class="role-btn px-6 py-2.5 rounded-lg text-sm font-bold transition-all active bg-white text-primary shadow-sm" data-role="lead">Тимлид</button>
+<button class="role-btn px-6 py-2.5 rounded-lg text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-role="hr">HR-менеджер</button>
+<button class="role-btn px-6 py-2.5 rounded-lg text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-role="intern">Стажер</button>
+</div>
+</div>
+<div class="max-w-5xl mx-auto bg-white rounded-3xl shadow-2xl border border-outline-variant overflow-hidden flex flex-col md:flex-row h-[700px]">
+<!-- Chat Sidebar -->
+<div class="w-full md:w-72 bg-surface-container-low border-r border-outline-variant p-6 flex flex-col">
+<div class="flex items-center gap-3 mb-8">
+<div class="bg-primary size-10 rounded-xl flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="folder_managed">folder_managed</span>
+</div>
+<div class="leading-none">
+<p class="font-bold text-sm">Sber Disk</p>
+<p class="text-xs text-on-surface-variant">423 документа</p>
+</div>
+</div>
+<div class="space-y-2 overflow-y-auto flex-1">
+<div class="p-3 bg-white rounded-lg text-xs font-medium text-on-surface-variant border border-outline-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="description">description</span> Отчет_Q3_2023.pdf
+                        </div>
+<div class="p-3 bg-white rounded-lg text-xs font-medium text-on-surface-variant border border-outline-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="table_chart">table_chart</span> Сметы_Проекта_Х.xlsx
+                        </div>
+<div class="p-3 bg-white rounded-lg text-xs font-medium text-on-surface-variant border border-outline-variant flex items-center gap-2 opacity-50">
+<span class="material-symbols-outlined text-sm" data-icon="lock">lock</span> Confidential_Wages.csv
+                        </div>
+</div>
+</div>
+<!-- Chat Main -->
+<div class="flex-1 flex flex-col bg-white">
+<div class="flex-1 p-8 space-y-6 overflow-y-auto" id="chat-container">
+<div class="flex gap-4 items-start">
+<div class="size-10 rounded-full bg-primary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" data-icon="smart_toy">smart_toy</span>
+</div>
+<div class="bg-surface-container-high rounded-2xl rounded-tl-none p-5 max-w-[80%]">
+<p class="text-on-surface leading-relaxed">
+                                    Приветствую! Я CorpAI — ваш персональный агент. У меня есть доступ к вашему Sber Disk. 
+                                    Как Тимлид, вы можете запрашивать аналитику по проектам и отчетность команды. Чем могу помочь?
+                                </p>
+</div>
+</div>
+<div class="flex gap-4 items-start justify-end">
+<div class="bg-primary text-white rounded-2xl rounded-tr-none p-5 max-w-[80%]">
+<p class="leading-relaxed">Синтезируй основные риски по проекту «Сфера» из последних трех встреч и отчета за август.</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="size-10 rounded-full bg-primary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" data-icon="smart_toy">smart_toy</span>
+</div>
+<div class="bg-surface-container-high rounded-2xl rounded-tl-none p-5 max-w-[80%]">
+<div class="flex items-center gap-2 mb-3">
+<span class="text-xs font-bold text-primary uppercase tracking-wider">Анализ завершен</span>
+<span class="h-px bg-outline-variant flex-1"></span>
+</div>
+<p class="text-on-surface mb-4">На основе файлов <span class="font-bold underline">MOM_Aug12.docx</span>, <span class="font-bold underline">MOM_Aug20.docx</span> и <span class="font-bold underline">Risk_Log.xlsx</span>:</p>
+<ul class="space-y-3">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-error mt-0.5 text-sm" data-icon="warning">warning</span>
+<span class="text-sm">Задержка поставки оборудования (критично для этапа 2).</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-secondary mt-0.5 text-sm" data-icon="info">info</span>
+<span class="text-sm">Нехватка QA-инженеров для интеграционного тестирования.</span>
+</li>
+</ul>
+<div class="mt-4 pt-4 border-t border-outline-variant/50 flex items-center justify-between">
+<button class="text-xs text-primary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="verified_user">verified_user</span>
+                                        Проверить источники (RAG Explainability)
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Chat Input -->
+<div class="p-6 border-t border-outline-variant">
+<div class="bg-surface-container rounded-2xl p-2 flex items-center gap-2">
+<input class="bg-transparent border-none focus:ring-0 flex-1 px-4 text-on-surface" placeholder="Задайте вопрос по документам..." type="text">
+<button class="bg-primary text-white size-10 rounded-xl flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Section: High-End Typography -->
+<section class="py-32 bg-white relative overflow-hidden" id="features">
+<div class="container mx-auto px-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+<div class="space-y-16">
+<div class="group">
+<div class="text-primary-container font-black text-6xl mb-4 opacity-10">01</div>
+<h3 class="text-3xl font-bold mb-4">Разграничение доступа (RBAC)</h3>
+<p class="text-lg text-on-surface-variant leading-relaxed max-w-lg">
+                            Интеллект CorpAI строго следует иерархии прав Sber Disk. Стажер никогда не получит данные о зарплатах, а топ-менеджер мгновенно увидит сводный отчет по всей вертикали.
+                        </p>
+</div>
+<div class="group">
+<div class="text-primary-container font-black text-6xl mb-4 opacity-10">02</div>
+<h3 class="text-3xl font-bold mb-4">Объяснимый ИИ (Explainability)</h3>
+<p class="text-lg text-on-surface-variant leading-relaxed max-w-lg">
+                            Никаких галлюцинаций. Каждое утверждение сопровождается гиперссылкой на конкретный абзац в вашем документе на Sber Disk.
+                        </p>
+</div>
+<div class="group">
+<div class="text-primary-container font-black text-6xl mb-4 opacity-10">03</div>
+<h3 class="text-3xl font-bold mb-4">Кросс-документный синтез</h3>
+<p class="text-lg text-on-surface-variant leading-relaxed max-w-lg">
+                            Агент умеет объединять информацию из PDF, Excel, Word и презентаций в один стройный ответ, выявляя скрытые зависимости и противоречия.
+                        </p>
+</div>
+</div>
+<div class="relative">
+<div class="absolute -inset-10 bg-primary/5 rounded-full blur-3xl"></div>
+<img class="relative z-10 w-full rounded-3xl shadow-2xl grayscale hover:grayscale-0 transition-all duration-700" data-alt="A sophisticated 3D visualization of floating digital glass layers representing data documents being scanned by a green laser beam. The scene is bright and minimalist, utilizing Sber's green and white corporate colors, professional and high-tech corporate atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVnk1_t0yGYh6AsCoB8btnYfOePMpdvK-Z9YTmdtuwCW-nMc9fH1hsqxxhLmUSYGX77g6LncAfktuP7mS4GW30kzZnoUt9wucQycAuo8srwIW7JH3CzW3MrjKJt3y38S2_TyUTsx0kD09RAXsKIhVCSfER1LZmaJBEzrG6vks1yxfrgDCFDm69LhBdxPNbuIj8tx5DhE3nvnOOaCcrHiHyTdISntj3e2S1wMW7mKWVUBXBDQITMCNERw">
+</div>
+</div>
+</div>
+</section>
+<!-- Architecture Section: Technical Diagram -->
+<section class="py-32 bg-surface-container-lowest" id="architecture">
+<div class="container mx-auto px-6">
+<div class="text-center mb-20">
+<h2 class="text-4xl font-bold mb-4">Архитектура Agentic RAG</h2>
+<p class="text-on-surface-variant max-w-2xl mx-auto">Как мы обеспечиваем скорость и безопасность корпоративного уровня</p>
+</div>
+<div class="relative bg-white rounded-[3rem] p-12 lg:p-20 border border-outline-variant overflow-hidden">
+<!-- SVG Diagram Background -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none opacity-20" preserveAspectRatio="xMidYMid slice" viewBox="0 0 1000 600">
+<path class="circuit-line" d="M100 300 H900" fill="none" stroke="#006b1d" stroke-width="1"></path>
+<path class="circuit-line" d="M500 100 V500" fill="none" stroke="#006b1d" stroke-width="1"></path>
+<circle cx="500" cy="300" fill="none" r="150" stroke="#006b1d" stroke-dasharray="10 10" stroke-width="1"></circle>
+</svg>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
+<div class="text-center space-y-6">
+<div class="size-20 mx-auto bg-primary-fixed rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="cloud_done">cloud_done</span>
+</div>
+<h4 class="text-xl font-bold">Sber Disk Source</h4>
+<p class="text-sm text-on-surface-variant">Прямая интеграция с API диска. Постоянная синхронизация версий документов.</p>
+</div>
+<div class="text-center space-y-6">
+<div class="size-20 mx-auto bg-secondary-container rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-4xl" data-icon="hub">hub</span>
+</div>
+<h4 class="text-xl font-bold">Vector Engine</h4>
+<p class="text-sm text-on-surface-variant">Перевод смыслов в векторы для мгновенного поиска по огромным массивам данных.</p>
+</div>
+<div class="text-center space-y-6">
+<div class="size-20 mx-auto bg-primary-fixed rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="shield">shield</span>
+</div>
+<h4 class="text-xl font-bold">Safety Guardrails</h4>
+<p class="text-sm text-on-surface-variant">Проверка запроса на соответствие DLP-политикам перед отправкой в LLM.</p>
+</div>
+</div>
+<div class="mt-20 p-8 bg-surface-container rounded-2xl border border-dashed border-outline text-center">
+<p class="text-primary font-bold text-lg mb-2">Локальное развертывание (On-Premise)</p>
+<p class="text-sm text-on-surface-variant max-w-xl mx-auto">CorpAI может быть развернут полностью внутри вашего контура, гарантируя, что ни один байт данных не покинет периметр безопасности компании.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-inverse-surface text-inverse-on-surface py-20">
+<div class="container mx-auto px-6">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
+<div class="col-span-1 md:col-span-1">
+<div class="flex items-center gap-3 mb-6">
+<div class="text-primary-fixed size-8">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<span class="text-white text-2xl font-bold tracking-tight">CorpAI</span>
+</div>
+<p class="text-sm text-outline-variant/60">© 2024 ПАО Сбербанк. Все права защищены. Интеллектуальное управление корпоративными данными.</p>
+</div>
+<div>
+<h5 class="text-white font-bold mb-6">Продукт</h5>
+<ul class="space-y-4 text-sm text-outline-variant/80">
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">Возможности</a></li>
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">Демо</a></li>
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">Безопасность</a></li>
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">API Docs</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-white font-bold mb-6">Компания</h5>
+<ul class="space-y-4 text-sm text-outline-variant/80">
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">О Сбере</a></li>
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">Карьера</a></li>
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">Пресс-центр</a></li>
+<li class=""><a class="hover:text-primary-fixed transition-colors" href="#">Контакты</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-white font-bold mb-6">Поддержка</h5>
+<div class="space-y-4">
+<button class="w-full py-3 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-all">Чат поддержки</button>
+<p class="text-xs text-outline-variant/60">По вопросам партнерства:<br>ai-partners@sber.ru</p>
+</div>
+</div>
+</div>
+<div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-widest text-outline-variant/40">
+<span class="">Made with Sber AI Technology</span>
+<div class="flex gap-8">
+<a href="#" class="">Privacy Policy</a>
+<a href="#" class="">Terms of Use</a>
+<a href="#" class="">Cookies</a>
+</div>
+</div>
+</div>
+</footer>
+<script>
+        // Role Switcher Interaction
+        const roleBtns = document.querySelectorAll('.role-btn');
+        const chatContainer = document.getElementById('chat-container');
+
+        const roleContexts = {
+            lead: "Приветствую! Я CorpAI — ваш персональный агент. У меня есть доступ к вашему Sber Disk. Как Тимлид, вы можете запрашивать аналитику по проектам и отчетность команды.",
+            hr: "Добрый день! Я CorpAI. Для вас подготовлен доступ к кадровым документам и регламентам. Могу помочь с онбордингом или поиском кандидатов в базе.",
+            intern: "Привет! Я твой помощник CorpAI. У меня есть доступ к базе знаний для стажеров и FAQ. Спрашивай что угодно о процессах в компании!"
+        };
+
+        roleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                roleBtns.forEach(b => {
+                    b.classList.remove('active', 'bg-white', 'text-primary', 'shadow-sm');
+                    b.classList.add('text-on-surface-variant');
+                });
+                btn.classList.add('active', 'bg-white', 'text-primary', 'shadow-sm');
+                btn.classList.remove('text-on-surface-variant');
+
+                // Simulate chat update
+                const role = btn.dataset.role;
+                const firstMsg = chatContainer.querySelector('p');
+                if (firstMsg) {
+                    firstMsg.innerText = roleContexts[role];
+                }
+            });
+        });
+
+        // Header scroll effect
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 100) {
+                header.classList.add('py-2');
+                header.classList.remove('py-4');
+                header.classList.add('shadow-xl');
+            } else {
+                header.classList.remove('py-2');
+                header.classList.add('py-4');
+                header.classList.remove('shadow-xl');
+            }
+        });
+    </script>
+
+
+
+
+</body></html>

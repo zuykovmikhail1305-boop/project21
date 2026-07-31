@@ -35,7 +35,7 @@ class CreateIndex:
             emb.delete_collection(self.collection_name)
         try:
             processor = Processing()
-            chunks = processor.chunking(file_path, doc_id=id)
+            chunks = processor.chunking(file_path=file_path, doc_id=id)
         except Exception as exc:
             raise RuntimeError(f"Ошибка при обработке {file_path}: {exc}") from exc
 

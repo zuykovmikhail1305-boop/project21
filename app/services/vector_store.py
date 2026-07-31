@@ -23,7 +23,7 @@ class VectorStore:
     def __init__(self):
         self.embedding = Embedding()
         self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
-        self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
+        self.collection_name = os.getenv("QDRANT_COLLECTION", "document_chunks")
 
     def search(self, query: str, limit: int = 20, collection_name: str = None):
         """Поиск в векторном хранилище."""

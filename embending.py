@@ -63,7 +63,7 @@ class Embedding:
             print(f"Сохранено {min(i+batch_size, total)} из {total}")
         print(f"✅ Все {total} точек сохранены в коллекцию '{collection_name}'")
 
-    def search_query(self, query, collection_name="my_docs", limit=1, return_text_only=False):
+    def search_query(self, query, collection_name="doc", limit=1, return_text_only=False):
         query_vector = self.encode(query)
         search_payload = {
             "vector": query_vector,
@@ -83,7 +83,7 @@ class Embedding:
         else:
             return [{"score": hit["score"], "payload": hit["payload"]} for hit in results]
 
-    def delete_collection(self, collection_name="my_docs"):
+    def delete_collection(self, collection_name="document_chunks"):
         """
         Полностью удаляет коллекцию из Qdrant.
         После этого все данные будут потеряны.
@@ -97,7 +97,7 @@ class Embedding:
         else:
             raise Exception(f"Ошибка при удалении коллекции: {resp.text}")
 
-    def clear_points(self, collection_name="my_docs", batch_size=64):
+    def clear_points(self, collection_name="document_chunks", batch_size=64):
         """
         Удаляет все точки из коллекции, но сохраняет саму коллекцию.
         """

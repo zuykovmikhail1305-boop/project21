@@ -14,7 +14,7 @@ class Embedding:
         # Чтение переменных окружения с дефолтными значениями
         self.emb_model = os.getenv("EMB_MODEL", "all-MiniLM-L6-v2")
         self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
-        self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
+        self.collection_name = os.getenv("QDRANT_COLLECTION", "document_chunks")
         self.vector_size = int(os.getenv("VECTOR_SIZE", "384"))  # если есть в .env, иначе 384
 
         self.model = SentenceTransformer(self.emb_model)

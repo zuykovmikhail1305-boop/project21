@@ -17,7 +17,7 @@ class Embedding:
     def __init__(self):
         self.emb_model = os.getenv("EMB_MODEL", "sergeyzh/rubert-tiny-turbo")
         self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
-        self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
+        self.collection_name = os.getenv("QDRANT_COLLECTION", "document_chunks")
         self.sparse_model = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
         self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
         self.fastembed_cache_dir = os.getenv("FASTEMBED_CACHE_DIR") or self.model_cache_dir

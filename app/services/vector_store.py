@@ -1,8 +1,8 @@
-"""Сервис для работы с Qdrant: hybrid search (dense + sparse), ACL-фильтрация и индексирование чанков."""
+"""Vector Store - совместимая версия для старого кода (обёртка над rag_embedder.py)."""
 
-import re
-from collections import Counter
-from typing import Optional
+from app.services.rag_embedder import Embedding
+import os
+from dotenv import load_dotenv
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
@@ -12,118 +12,31 @@ try:
 except ImportError:  # compatibility with older qdrant-client versions
     UnexpectedStatusCode = Exception
 
-from app.core.config import QDRANT_COLLECTION_NAME, SPARSE_SEARCH_ENABLED, SPARSE_VECTOR_NAME
+from app.core.config import QDRANT_COLLECTION_NAME, QDRANT_VECTOR_SIZE, SPARSE_SEARCH_ENABLED, SPARSE_VECTOR_NAME
 from app.core.dependencies import get_qdrant_client
 from app.services.acl import build_qdrant_filter
 
 
 class VectorStore:
-    """Сервис для поиска по векторной БД Qdrant.
+    """Vector store for Qdrant - обёртка для обратной совместимости."""
 
-    Поддерживает:
-    - Dense vector search (семантический поиск)
-    - Sparse vector search (BM25-подобный keyword search)
-    - ACL-фильтрация через allowed_groups
-    """
+    def __init__(self):
+        self.embedding = Embedding()
+        self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
+        self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
 
-    def __init__(self, client: Optional[QdrantClient] = None):
-        self.client = client or get_qdrant_client()
+    def search(self, query: str, limit: int = 20, collection_name: str = None):
+        """Поиск в векторном хранилище."""
+        if collection_name is None:
+            collection_name = self.collection_name
 
-    @staticmethod
-    def _text_to_sparse_vector(text: str) -> Optional[models.SparseVector]:
-        """Преобразовать текст в Qdrant SparseVector (term frequency).
-
-        Использует BM25-подобную токенизацию из RAG_Misha/bm25_search.py.
-        Токены хэшируются в индексное пространство для Qdrant sparse vector формата.
-
-        Returns:
-            models.SparseVector с indices и values, или None если текст пуст.
-        """
-        if not text or not text.strip():
-            return None
-
-        # Токенизация (как в RAG_Misha/bm25_search.py)
-        tokens = re.findall(r'\w+', text.lower())
-        if not tokens:
-            return None
-
-        term_freq = Counter(tokens)
-
-        indices = []
-        values = []
-        # Хэшируем каждый терм в индекс в диапазоне [0, 10_000_000)
-        # Это даёт достаточно большое sparse пространство
-        for term, freq in term_freq.items():
-            idx = abs(hash(term)) % 10_000_000
-            indices.append(idx)
-            # Используем log(1 + freq) для сглаживания (BM25-like)
-            import math
-            values.append(math.log1p(float(freq)))
-
-        return models.SparseVector(
-            indices=indices,
-            values=values,
-        )
-
-    async def search(
-        self,
-        query_vector: list[float],
-        user_groups: list[int],
-        top_k: int = 10,
-        score_threshold: Optional[float] = None,
-    ) -> list[dict]:
-        """Поиск по dense вектору с ACL-фильтрацией.
-
-        Args:
-            query_vector: Вектор запроса.
-            user_groups: Список ID групп пользователя (для ACL).
-            top_k: Количество результатов.
-            score_threshold: Минимальный порог сходства.
-
-        Returns:
-            Список чанков с метаданными.
-        """
-        import logging
-        logger = logging.getLogger(__name__)
-
-        # Строим ACL-фильтр
-        acl_filter = build_qdrant_filter(user_groups)
-
-        logger.info("=== DIAG: Qdrant search: collection=%s, top_k=%d, user_groups=%s, score_threshold=%s",
-                    QDRANT_COLLECTION_NAME, top_k, user_groups, score_threshold)
-
-        # Поиск через query_points (qdrant-client v1.18+)
-        search_result = self.client.query_points(
-            collection_name=QDRANT_COLLECTION_NAME,
-            query=query_vector,
-            query_filter=models.Filter(**acl_filter),
-            limit=top_k,
-            score_threshold=score_threshold,
-        )
-
-        # Форматируем результат
-        results = []
-        for point in search_result.points:
-            results.append(self._format_point(point))
-
-        logger.info("=== DIAG: Qdrant search returned %d points (requested top_k=%d)", len(results), top_k)
-        if results:
-            logger.info("=== DIAG: First result: id=%s, score=%.4f, doc_id=%s, content_preview=%s",
-                        results[0]["id"], results[0]["score"], results[0]["document_id"],
-                        results[0]["content"][:100])
-        else:
-            logger.warning("=== DIAG: Qdrant search returned 0 points!")
-
+        results = self.embedding.dense_search(query, collection_name=collection_name, limit=limit)
         return results
 
-    async def hybrid_search(
-        self,
-        query_vector: list[float],
-        user_groups: list[int],
-        query_text: Optional[str] = None,
-        top_k: int = 10,
-    ) -> list[dict]:
-        """Гибридный поиск: dense + sparse vectors через Qdrant prefetch.
+    def save_vectors(self, data, collection_name: str = None):
+        """Сохранить векторы в Qdrant.
+        if collection_name is None:
+            collection_name = self.collection_name
 
         Использует Qdrant prefetch для параллельного поиска по dense и sparse векторам.
         Результаты объединяются и ранжируются Qdrant'ом.
@@ -245,7 +158,7 @@ class VectorStore:
         """
         collection_name = collection_name or QDRANT_COLLECTION_NAME
         if vector_size is None:
-            vector_size = 384
+            vector_size = QDRANT_VECTOR_SIZE
 
         try:
             self.client.get_collection(collection_name=collection_name)

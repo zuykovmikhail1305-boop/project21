@@ -1,3 +1,5 @@
+import binascii
+import base64
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -5,10 +7,10 @@ import os
 
 load_dotenv('.env')
 
-# === PostgreSQL ===
+# === Database ===
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@postgres:5432/project21"
+    "postgresql://postgres:postgres@postgres:5432/project21" # or "sqlite:///./project21.db"
 )
 
 engine = None
@@ -22,7 +24,9 @@ def _build_engine():
         return engine, SessionLocal
 
     try:
-        engine = create_engine(DATABASE_URL)
+        # SQLite требует connect_args для потокобезопасности
+        connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+        engine = create_engine(DATABASE_URL, connect_args=connect_args)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     except Exception:
         engine = None
@@ -87,8 +91,6 @@ GIGACHAT_API_URL = os.getenv("GIGACHAT_API_URL", "https://api.giga.chat/v1")
 GIGACHAT_MODEL = os.getenv("GIGACHAT_MODEL", "GigaChat-2")
 # Credentials для SDK: если GIGACHAT_CLIENT_SECRET уже является Base64 (Authorization Key),
 # используем его напрямую. Иначе формируем Base64 из client_id|client_secret.
-import base64
-import binascii
 _GIGACHAT_CREDENTIALS_ENV = os.getenv("GIGACHAT_CREDENTIALS", "")
 if _GIGACHAT_CREDENTIALS_ENV:
     GIGACHAT_CREDENTIALS = _GIGACHAT_CREDENTIALS_ENV
@@ -128,7 +130,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 # === Storage (local files for MVP) ===
 LOCAL_STORAGE_PATH = os.getenv("LOCAL_STORAGE_PATH", "./storage")
 
-### === Hugging Face Token ===
+# === Hugging Face Token ===
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 
 
@@ -142,3 +144,26 @@ CORS_ORIGINS = os.getenv(
 # === Sparse Search (BM25) ===
 SPARSE_SEARCH_ENABLED = os.getenv("SPARSE_SEARCH_ENABLED", "true").lower() == "true"
 SPARSE_VECTOR_NAME = os.getenv("SPARSE_VECTOR_NAME", "bm25")
+
+
+# === Self API URL (для внутренних HTTP-вызовов к самому себе) ===
+SELF_API_URL = os.getenv("SELF_API_URL", "http://localhost:8000/api/v1")
+
+
+CHUNK_MODEL = os.getenv('CHUNK_MODEL', 'sergeyzh/rubert-tiny-turbo') #
+CHUNK_THRESHOLD = os.getenv('CHUNK_THRESHOLD', '75') #
+
+INDEX_PATH = os.getenv('INDEX_PATH', '')
+FILE_PATH = os.getenv('FILE_PATH', '/storage')
+
+AGENT_TEMPERATURE = os.getenv('AGENT_TEMPERATURE', '0.1') #
+AGENT_MAX_TOKEN = os.getenv('AGENT_MAX_TOKEN', '8192') #
+
+# HyDe Setting
+HYDE_TEMPERATURE = os.getenv('HYDE_TEMPERATURE', '0.7') #
+HYDE_MAX_TOKEN = os.getenv('HYDE_MAX_TOKEN', '2048') #
+MAX_CHUNK_HYDE = os.getenv('MAX_CHUNK_HYDE', '5') #
+LIMIT_RRF = os.getenv('LIMIT_RRF', '20') #
+NUM_RESULTS = os.getenv('NUM_RESULTS', '20') #
+TOP_RERANKED = os.getenv('TOP_RERANKED', '5') #
+CROSS_ENC = os.getenv('CROSS_ENC', 'DiTy/cross-encoder-russian-msmarco') #

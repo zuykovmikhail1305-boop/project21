@@ -35,15 +35,20 @@ FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    NODE_PATH="/usr/local/lib/node_modules"
 
-# Install runtime system dependencies only
+# Install runtime system dependencies + Node.js + Marp CLI
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     libmagic1 \
     libgl1 \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g @marp-team/marp-cli \
+    && npm cache clean --force
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser

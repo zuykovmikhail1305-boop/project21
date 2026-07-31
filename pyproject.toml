@@ -36,7 +36,6 @@ dependencies = [
     "orjson>=3.11.9",
     "pandas>=2.2.0",
     "pluggy>=1.6.0",
-    "psycopg2>=2.9.12",
     "pydantic>=2.13.4",
     "pydantic-core>=2.46.4",
     "pygments>=2.20.0",
@@ -75,9 +74,15 @@ dependencies = [
     "docx2pdf>=0.1.8",
     "accelerate>=1.14.0",
     "langchain-gigachat>=0.5.1",
+    "pytest-asyncio>=1.4.0",
+    "docforge>=0.1.0",
+    "fastembed>=0.8.0",
 ]
 
 [tool.uv.workspace]
 members = [
     "project_21",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -1,10 +1,11 @@
 """API эндпоинты для работы с документами."""
 
+
+import asyncio
 import os
 from typing import Optional
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Request
 from sqlalchemy.orm import Session
-
 from app.core.config import get_db
 from app.crud.crud_document import (
     create_document,
@@ -56,9 +57,9 @@ async def get_document_detail(document_id: int, db: Session = Depends(get_db)):
 
 @router.post("/upload", response_model=DocumentUploadResponse, status_code=201)
 async def upload_document(
+    request: Request,
     file: UploadFile = File(...),
     folder_id: Optional[int] = None,
-    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
 ):
     """Загрузить документ."""
@@ -99,9 +100,19 @@ async def upload_document(
         logger.error(f"DB create_document failed: {e}", exc_info=True)
         raise
 
-    # Запускаем ETL-обработку в фоне
-    logger.info(f"Adding background task for document {doc.id}")
-    background_tasks.add_task(process_document_background, doc.id)
+    # Извлекаем JWT токен из запроса для авторизации внутреннего HTTP-вызова к RAG API
+    auth_header = request.headers.get("Authorization", "")
+    jwt_token = ""
+    if auth_header.startswith("Bearer "):
+        jwt_token = auth_header[7:]
+    else:
+        # Fallback: пробуем взять из cookie
+        jwt_token = request.cookies.get("access_token", "")
+    logger.info(f"JWT token extracted for background task: {'present' if jwt_token else 'MISSING'}")
+
+    # Запускаем ETL-обработку в фоне через asyncio
+    logger.info(f"Creating background task for document {doc.id}")
+    asyncio.create_task(process_document_background(doc.id, jwt_token))
 
     return DocumentUploadResponse(
         id=doc.id,
@@ -110,10 +121,15 @@ async def upload_document(
     )
 
 
-def process_document_background(document_id: int):
-    """Фоновая задача: запуск ETL пайплайна."""
+async def process_document_background(document_id: int, token: str = ""):
+    """Фоновая задача: запуск ETL пайплайна (async) с JWT-токеном.
+
+    Args:
+        document_id: ID документа в БД.
+        token: JWT-токен для авторизации HTTP-вызова к RAG API.
+    """
     from app.services.etl_pipeline import process_document
-    process_document(document_id)
+    await process_document(document_id, token=token)
 
 
 @router.delete("/{document_id}", status_code=204)

@@ -120,7 +120,7 @@ async def lifespan(app: FastAPI):
             logger.warning("Failed to drop tables on shutdown: %s", e)
 
 
-fastapi_app = FastAPI(title="CorpAI Intelligence", version="0.1.0", lifespan=lifespan)
+fastapi_app = FastAPI(title="CorpAI Intelligence", version="0.1.0", lifespan=lifespan, debug=True)
 
 # === CORS ===
 fastapi_app.add_middleware(
@@ -143,32 +143,6 @@ async def add_security_headers(request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Cache-Control"] = "no-store"
     return response
-
-
-# === 401 Unauthorized Exception Handler ===
-
-
-@fastapi_app.exception_handler(HTTPException)
-async def unauthorized_exception_handler(request: Request, exc: HTTPException):
-    """Перехватывает HTTPException со статусом 401 и отображает страницу 401.html."""
-    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-        templates = get_templates()
-        return templates.TemplateResponse(
-            request,
-            "401.html",
-            {
-                "request": request,
-                "active_page": "401",
-                "detail": exc.detail if exc.detail else "",
-            },
-            status_code=status.HTTP_401_UNAUTHORIZED,
-        )
-    # Для остальных HTTPException — стандартное поведение
-    from fastapi.responses import JSONResponse
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
-    )
 
 
 # === Static files ===
@@ -194,10 +168,53 @@ fastapi_app.include_router(api_router)
 # === Page Routes (HTML) ===
 fastapi_app.include_router(page_router)
 
+# === 401 Unauthorized Exception Handler ===
+
+@fastapi_app.exception_handler(HTTPException)
+async def unauthorized_exception_handler(request: Request, exc: HTTPException):
+    """Перехватывает HTTPException.
+
+    - Для API-запросов (Accept: application/json или путь начинается с /api/)
+      возвращает JSONResponse с detail.
+    - Для HTML-запросов со статусом 401 отображает страницу 401.html.
+    """
+    from fastapi.responses import JSONResponse
+
+    # Определяем, API-ли это запрос
+    accept_header = request.headers.get("accept", "")
+    is_api_request = (
+        request.url.path.startswith("/api/")
+        or "application/json" in accept_header
+    )
+
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED and not is_api_request:
+        templates = get_templates()
+        return templates.TemplateResponse(
+            request,
+            "401.html",
+            {
+                "request": request,
+                "active_page": "401",
+                "detail": exc.detail if exc.detail else "",
+            },
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Для API-запросов и остальных HTTPException — JSON
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
 
 @fastapi_app.get("/")
 async def root():
     return {"message": "CorpAI Intelligence API", "status": "running"}
+
+
+@fastapi_app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":  # for local development only, use uvicorn command for production

@@ -14,8 +14,11 @@ from __future__ import annotations
 import json
 import logging
 import os
+from pydantic import ValidationError as PydanticValidationError
 from datetime import datetime, timezone
 from typing import Any, Optional
+
+from langchain_core.output_parsers import StrOutputParser
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -36,6 +39,7 @@ from app.services.artifact.models import (
     ArtifactPlan,
     ArtifactContext,
     DocumentModel,
+    SectionPlan,
     Theme,
     ValidationResult,
     RenderResult,
@@ -85,6 +89,44 @@ ARTIFACT_PLANNING_PROMPT = """Ты — архитектор корпоратив
    - columns: какие колонки данных нужны (например, ["month", "revenue"])
 
 5. Для table-блоков укажи headers и rows, если данные известны из контекста.
+
+КРИТИЧЕСКОЕ ПРАВИЛО: Каждая секция ДОЛЖНА содержать минимум 2-3 блока.
+Секция с пустым списком blocks НЕДОПУСТИМА.
+Всегда включайте как минимум заголовок (heading) и параграф (paragraph) в каждую секцию.
+
+КРИТИЧЕСКОЕ ТРЕБОВАНИЕ К БЛОКАМ:
+Каждый блок ОБЯЗАТЕЛЬНО должен содержать поле "type" с одним из значений: "heading", "paragraph", "bullet_list", "numbered_list", "table", "chart", "image", "code", "quote", "formula", "columns", "callout", "diagram".
+
+В зависимости от типа блока, добавьте соответствующие поля:
+- heading: {{"type": "heading", "level": 1, "text": "Заголовок"}}
+- paragraph: {{"type": "paragraph", "text": "Текст параграфа"}}
+- bullet_list: {{"type": "bullet_list", "items": ["пункт 1", "пункт 2"]}}
+- numbered_list: {{"type": "numbered_list", "items": ["шаг 1", "шаг 2"]}}
+- table: {{"type": "table", "headers": ["колонка1", "колонка2"], "rows": [["значение1", "значение2"]]}}
+- chart: {{"type": "chart", "description": "Описание графика", "data_source": "откуда данные", "columns": ["колонка1", "колонка2"]}}
+- code: {{"type": "code", "language": "python", "code": "print('hello')"}}
+- quote: {{"type": "quote", "text": "Текст цитаты", "source": "Источник"}}
+- image: {{"type": "image", "src": "путь/к/изображению", "alt": "Описание"}}
+- callout: {{"type": "callout", "style": "info", "text": "Текст выделенного блока"}}
+
+ПРИМЕР КОРРЕКТНОЙ СЕКЦИИ (все блоки содержат поле type):
+{{
+  "title": "Общая информация",
+  "blocks": [
+    {{"type": "heading", "level": 1, "text": "Общая информация о компании"}},
+    {{"type": "paragraph", "text": "Компания Ozon является крупнейшей e-commerce платформой в России."}},
+    {{"type": "bullet_list", "items": ["Выручка за 2024 год: X млрд руб.", "Рост год к году: Y%"]}}
+  ]
+}}
+
+НЕПРАВИЛЬНО (блок без type):
+{{"blocks": [{{}}]}}  // ОШИБКА: каждый блок должен содержать поле type! Пустой словарь {{}} недопустим.
+
+НЕПРАВИЛЬНО (секция без blocks):
+{{
+  "title": "Анализ выручки",
+  "blocks": []  // ОШИБКА: blocks не может быть пустым!
+}}
 
 ## Шаблон документа
 Используй шаблон "{template_name}" как основу для структуры.
@@ -395,6 +437,28 @@ class ArtifactGeneratorAgent:
                 theme_name=theme_name,
             )
 
+            # DIAG: Log the plan being passed to DocumentBuilder
+            total_blocks = sum(
+                len(s.blocks) if isinstance(s, SectionPlan) else len(s.get("blocks", [])) if isinstance(s, dict) else 0
+                for s in plan.sections
+            )
+            logger.info(
+                "=== DIAG: Building document from plan: title=%s sections=%d blocks_total=%d",
+                plan.title, len(plan.sections), total_blocks,
+            )
+            for i, section in enumerate(plan.sections):
+                if isinstance(section, SectionPlan):
+                    logger.info(
+                        "=== DIAG: Plan section %d: title=%s blocks=%d",
+                        i, section.title, len(section.blocks),
+                    )
+                elif isinstance(section, dict):
+                    blocks = section.get("blocks", [])
+                    logger.info(
+                        "=== DIAG: Plan section %d: title=%s blocks=%d",
+                        i, section.get("title", "N/A"), len(blocks),
+                    )
+
             document = self.document_builder.build(
                 plan=plan,
                 context=artifact_context,
@@ -669,9 +733,96 @@ class ArtifactGeneratorAgent:
             template_name=template_name,
         )
 
+        # DIAG: Log the prompt being sent to LLM (truncated to avoid log flooding)
+        logger.debug("=== DIAG: Planning prompt (first 500 chars): %s ...", prompt[:500])
+
         # Pylance: planning_chain narrowed to not-None by the check above
         chain = self.planning_chain
-        llm_plan = await chain.ainvoke(prompt)  # type: ignore[arg-type]
+
+        # Retry loop: try full prompt first, then simplified prompt, then template fallback
+        llm_plan = None
+        for attempt in range(2):
+            try:
+                llm_plan = await chain.ainvoke(prompt)  # type: ignore[arg-type]
+                break  # success — exit retry loop
+            except (PydanticValidationError, ValueError) as e:
+                logger.warning(
+                    "LLM plan validation failed (attempt %d/2): %s",
+                    attempt + 1, e,
+                )
+                if attempt == 0:
+                    # Retry with simplified prompt that emphasizes structure
+                    logger.info("Retrying with simplified prompt (attempt 2/2)")
+                    prompt = prompt + (
+                        "\n\nВАЖНО: Верни ТОЛЬКО структуру с заполненными блоками. "
+                        "Каждая секция должна содержать минимум 2 блока: заголовок и параграф. "
+                        "НЕ возвращай секции с пустыми блоками."
+                    )
+                else:
+                    # Fallback: create a minimal valid plan from template
+                    logger.info("Falling back to template-based plan")
+                    llm_plan = ArtifactPlan(
+                        title=query[:200] or "Untitled",
+                        artifact_type="pdf",
+                        sections=[
+                            SectionPlan(
+                                title=query[:200] or "Untitled",
+                                blocks=[
+                                    {"type": "heading", "level": 1, "text": query[:200] or "Untitled"},
+                                    {"type": "paragraph", "text": f"Данный раздел содержит информацию по запросу: {query}"},
+                                ],
+                            ),
+                        ],
+                    )
+
+        # DIAG: Log the raw LLM response before any parsing
+        if isinstance(llm_plan, ArtifactPlan):
+            raw_json = llm_plan.model_dump_json()
+            logger.info(
+                "=== DIAG: Raw LLM plan response (ArtifactPlan): title=%s sections=%d raw=%s",
+                llm_plan.title,
+                len(llm_plan.sections),
+                raw_json[:1000],
+            )
+        elif isinstance(llm_plan, dict):
+            logger.info(
+                "=== DIAG: Raw LLM plan response (dict): title=%s sections=%d raw=%s",
+                llm_plan.get("title", "N/A"),
+                len(llm_plan.get("sections", [])),
+                json.dumps(llm_plan, ensure_ascii=False)[:1000],
+            )
+        else:
+            logger.info(
+                "=== DIAG: Raw LLM plan response (unknown type=%s): %s",
+                type(llm_plan).__name__,
+                str(llm_plan)[:500],
+            )
+
+        # DIAG: Log each section's block count from the raw response
+        raw_sections = (
+            llm_plan.sections
+            if isinstance(llm_plan, ArtifactPlan)
+            else llm_plan.get("sections", [])
+            if isinstance(llm_plan, dict)
+            else []
+        )
+        for i, section in enumerate(raw_sections):
+            if isinstance(section, SectionPlan):
+                logger.info(
+                    "=== DIAG: Section %d: title=%s blocks=%d",
+                    i, section.title, len(section.blocks),
+                )
+            elif isinstance(section, dict):
+                blocks = section.get("blocks", [])
+                logger.info(
+                    "=== DIAG: Section %d: title=%s blocks=%d",
+                    i, section.get("title", "N/A"), len(blocks),
+                )
+            else:
+                logger.info(
+                    "=== DIAG: Section %d: type=%s",
+                    i, type(section).__name__,
+                )
 
         # with_structured_output возвращает Pydantic модель
         if isinstance(llm_plan, ArtifactPlan):

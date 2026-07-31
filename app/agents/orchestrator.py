@@ -333,6 +333,25 @@ class AgentOrchestrator:
         if route == "search" and state.get("rewrite_result"):
             rewrite = state["rewrite_result"]
             state["final_answer"] = rewrite["answer"]
+
+            # Конвертируем citations из RewriteResponse (list[str] document_id)
+            # в формат list[dict], совместимый с CitationFormatter на фронтенде
+            rewrite_citations = rewrite.get("citations", [])
+            if rewrite_citations:
+                state["citations"] = [
+                    {
+                        "document_id": doc_id,
+                        "document_name": f"Документ {doc_id}",
+                        "chunk_index": 0,
+                        "score": 1.0,
+                    }
+                    for doc_id in rewrite_citations
+                ]
+                logger.info(
+                    "=== DIAG: _finalize updated citations from rewrite: %d citations",
+                    len(rewrite_citations),
+                )
+
             logger.info("=== DIAG: _finalize using rewrite_result.answer (len=%d)", len(state["final_answer"]))
         elif route == "search" and state.get("search_result"):
             # Fallback: если рерайтинг не сработал, используем сырой ответ

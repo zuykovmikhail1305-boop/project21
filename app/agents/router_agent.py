@@ -266,6 +266,9 @@ class RouterAgent:
                 logger.warning("=== DIAG: GigaChat returned non-RouteDecision: %s", type(result))
             except Exception as e:
                 logger.warning("=== DIAG: GigaChat router failed: %s", e)
+                # DIAG: Log full exception details
+                import traceback
+                logger.warning("=== DIAG: GigaChat router exception traceback:\n%s", traceback.format_exc())
 
         # 2. ChatOpenAI with_structured_output
         if self._openai_chain is not None:

@@ -46,8 +46,24 @@ class GigaChatClient(LLMProvider):
 
     async def _get_access_token(self) -> str:
         """Get a valid access token, refreshing if necessary."""
+        import logging
+        logger = logging.getLogger(__name__)
+
         if self._access_token and time.time() < self._token_expires_at - 60:
             return self._access_token
+
+        # DIAG: Log the credentials being used (masked)
+        creds_preview = self._credentials[:20] + "..." if self._credentials else "EMPTY"
+        logger.info("=== DIAG: _get_access_token: credentials=%s, auth_url=%s", creds_preview, self.auth_url)
+
+        # DIAG: Try to decode the credentials to verify they're valid Base64
+        try:
+            import base64
+            decoded = base64.b64decode(self._credentials, validate=True)
+            decoded_str = decoded.decode("utf-8", errors="replace")
+            logger.info("=== DIAG: _get_access_token: decoded credentials=%s", decoded_str)
+        except Exception as e:
+            logger.error("=== DIAG: _get_access_token: credentials are NOT valid Base64! error=%s", e)
 
         # Request new token via Authorization: Basic <base64_credentials>
         async with httpx.AsyncClient(verify=False) as client:  # noqa: S501

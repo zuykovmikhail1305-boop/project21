@@ -21,7 +21,7 @@ class Embedding:
             metadata = getattr(item, 'metadata', {})
             return text, metadata
 
-    def save_to_qdrant(self, data, collection_name="my_docs", batch_size=64):
+    def save_to_qdrant(self, data, collection_name="document_chunks", batch_size=64):
         # Генерируем векторы и формируем точки
         points = []
         for item in data:

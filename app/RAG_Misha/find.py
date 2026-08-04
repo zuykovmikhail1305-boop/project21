@@ -6,9 +6,6 @@ from app.RAG_Misha.processing import Processing
 from sentence_transformers import CrossEncoder
 from app.core.config import *
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 class Find_answer():
@@ -32,8 +29,8 @@ class Find_answer():
         self.top_k = int(TOP_RERANKED)
         self.limit_rrf = int(LIMIT_RRF)
         self.cross_encoder_model = CROSS_ENC
-        self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
-        self.local_files_only = self._env_to_bool(os.getenv("LOCAL_FILES_ONLY"), default=False)
+        self.model_cache_dir = MODEL_CACHE_DIR
+        self.local_files_only = LOCAL_FILES_ONLY
 
         if self.local_files_only:
             os.environ.setdefault("HF_HUB_OFFLINE", "1")

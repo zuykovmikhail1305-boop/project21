@@ -1,15 +1,14 @@
 """RAG Agent: использует GigaChat для генерации ответов на основе контекста."""
 
 from langchain_gigachat.chat_models import GigaChat
-import os
 from app.core.config import *
 
 
 class Agent:
     def __init__(self, max_context_messages=20):
         # Конфиг Agent
-        self.agent_temperature = float(os.getenv("AGENT_TEMPERATURE", "0.1"))
-        self.agent_max_tokens = int(os.getenv("AGENT_MAX_TOKEN", "8192"))
+        self.agent_temperature = float(AGENT_TEMPERATURE)
+        self.agent_max_tokens = int(AGENT_MAX_TOKEN)
 
         # Инициализируем GigaChat клиент через LangChain
         self.client = GigaChat(

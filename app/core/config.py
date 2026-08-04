@@ -52,6 +52,7 @@ def get_db():
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "document_chunks")
+QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "document_chunks")
 QDRANT_VECTOR_SIZE = int(os.getenv("QDRANT_VECTOR_SIZE", "384"))  # sentence-transformers/all-MiniLM-L6-v2
 
 
@@ -167,3 +168,16 @@ LIMIT_RRF = os.getenv('LIMIT_RRF', '20') #
 NUM_RESULTS = os.getenv('NUM_RESULTS', '20') #
 TOP_RERANKED = os.getenv('TOP_RERANKED', '5') #
 CROSS_ENC = os.getenv('CROSS_ENC', 'DiTy/cross-encoder-russian-msmarco') #
+
+# === Embedding / Vector Search (RAG services) ===
+EMB_MODEL = os.getenv('EMB_MODEL', 'all-MiniLM-L6-v2')
+# Алиас для QDRANT_HOST, чтобы существующий RAG-код продолжал работать без смены имени переменной.
+QDRANT_BASE = os.getenv('QDRANT_BASE', QDRANT_HOST)
+VECTOR_SIZE = int(os.getenv('VECTOR_SIZE', '384'))
+SPARSE_MODEL = os.getenv('SPARSE_MODEL', 'Qdrant/bm25')
+MODEL_CACHE_DIR = os.getenv('MODEL_CACHE_DIR', '')
+FASTEMBED_CACHE_DIR = os.getenv('FASTEMBED_CACHE_DIR', '')
+LOCAL_FILES_ONLY = os.getenv('LOCAL_FILES_ONLY', 'false').lower() == 'true'
+HF_HUB_OFFLINE = os.getenv('HF_HUB_OFFLINE', 'false').lower() == 'true'
+TRANSFORMERS_OFFLINE = os.getenv('TRANSFORMERS_OFFLINE', 'false').lower() == 'true'
+QDRANT_API_KEY = os.getenv('QDRANT_API_KEY', '')

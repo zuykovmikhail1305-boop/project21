@@ -1,20 +1,17 @@
 """RAG Indexer: индексация документов в Qdrant и BM25."""
 
-import os
 import pickle
 
-from dotenv import load_dotenv
 from app.RAG_Misha.embending import Embedding
 from app.RAG_Misha.processing import Processing
-
-load_dotenv()
+from app.core.config import QDRANT_COLLECTION, CHUNK_THRESHOLD
 
 class CreateIndex:
     def __init__(self):
         self.emb = Embedding()
-        self.collection_name = os.getenv("QDRANT_COLLECTION", "default_collection")
+        self.collection_name = QDRANT_COLLECTION
         self.recreate = False
-        self.chunking_threshold = int(os.getenv("CHUNK_THRESHOLD", "75"))
+        self.chunking_threshold = int(CHUNK_THRESHOLD)
 
     def create_index(self, file_path=None, id=None):
         """

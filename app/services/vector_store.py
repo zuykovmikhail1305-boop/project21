@@ -1,8 +1,6 @@
 """Vector Store - совместимая версия для старого кода (обёртка над rag_embedder.py)."""
 
 from app.services.rag_embedder import Embedding
-import os
-from dotenv import load_dotenv
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
@@ -12,7 +10,7 @@ try:
 except ImportError:  # compatibility with older qdrant-client versions
     UnexpectedStatusCode = Exception
 
-from app.core.config import QDRANT_COLLECTION_NAME, QDRANT_VECTOR_SIZE, SPARSE_SEARCH_ENABLED, SPARSE_VECTOR_NAME
+from app.core.config import QDRANT_COLLECTION_NAME, QDRANT_VECTOR_SIZE, SPARSE_SEARCH_ENABLED, SPARSE_VECTOR_NAME, QDRANT_BASE, QDRANT_COLLECTION
 from app.core.dependencies import get_qdrant_client
 from app.services.acl import build_qdrant_filter
 
@@ -22,8 +20,8 @@ class VectorStore:
 
     def __init__(self):
         self.embedding = Embedding()
-        self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
-        self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
+        self.qdrant_url = QDRANT_BASE
+        self.collection_name = QDRANT_COLLECTION
 
     def search(self, query: str, limit: int = 20, collection_name: str = None):
         """Поиск в векторном хранилище."""

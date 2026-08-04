@@ -10,9 +10,7 @@ from typing import List, Dict, Any, Optional
 from app.services.agent_rag import Agent
 from app.services.rag_indexer import create_index
 from app.services.bm25_searcher import BM25Search
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import INDEX_PATH
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -74,7 +72,7 @@ async def ask_question(request: QuestionRequest) -> RAGResponse:
     global _history
 
     try:
-        index_path = os.getenv("INDEX_PATH", "bm25_index.pkl")
+        index_path = INDEX_PATH
 
         # Load BM25 index
         if not os.path.exists(index_path):

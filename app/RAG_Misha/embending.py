@@ -1,7 +1,6 @@
 import os
 import uuid
 
-from dotenv import load_dotenv
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
 from app.core.config import *
@@ -15,13 +14,13 @@ class Embedding:
         return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
     def __init__(self):
-        self.emb_model = os.getenv("EMB_MODEL", "sergeyzh/rubert-tiny-turbo")
-        self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
-        self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
-        self.sparse_model = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
-        self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
-        self.fastembed_cache_dir = os.getenv("FASTEMBED_CACHE_DIR") or self.model_cache_dir
-        self.local_files_only = self._env_to_bool(os.getenv("LOCAL_FILES_ONLY"), default=False)
+        self.emb_model = EMB_MODEL
+        self.qdrant_url = QDRANT_BASE
+        self.collection_name = QDRANT_COLLECTION
+        self.sparse_model = SPARSE_MODEL
+        self.model_cache_dir = MODEL_CACHE_DIR
+        self.fastembed_cache_dir = FASTEMBED_CACHE_DIR or self.model_cache_dir
+        self.local_files_only = LOCAL_FILES_ONLY
 
         if self.local_files_only:
             os.environ.setdefault("HF_HUB_OFFLINE", "1")
@@ -34,10 +33,10 @@ class Embedding:
             st_kwargs["cache_folder"] = self.model_cache_dir
 
         self.model = SentenceTransformer(self.emb_model, **st_kwargs)
-        self.vector_size = int(os.getenv("QDRANT_VECTOR_SIZE", "312"))
+        self.vector_size = QDRANT_VECTOR_SIZE
         self.client = QdrantClient(
             url=self.qdrant_url,
-            api_key=os.getenv("QDRANT_API_KEY"),
+            api_key=QDRANT_API_KEY,
         )
         sparse_kwargs = {}
         if self.fastembed_cache_dir:

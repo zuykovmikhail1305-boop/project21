@@ -2,9 +2,7 @@
 
 import asyncio
 from typing import Optional, Any
-import os
-from dotenv import load_dotenv
-load_dotenv()
+from app.core.config import CROSS_ENC
 
 class Reranker:
     """Переранжирование результатов поиска с помощью Cross-Encoder.
@@ -16,7 +14,7 @@ class Reranker:
     _shared_model: Any = None
     _shared_model_name: str = ""
 
-    def __init__(self, model_name: str = os.getenv('CROSS_ENC')):
+    def __init__(self, model_name: str = CROSS_ENC):
         self.model_name = model_name
 
     def _load_model(self):

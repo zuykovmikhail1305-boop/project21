@@ -10,11 +10,17 @@ from app.services.embedder import EmbedderService
 from app.services.rag_embedder import Embedding
 # from app.services.document_processor import Processing
 from app.services.bm25_searcher import BM25Search
-import os
 import pickle
-from dotenv import load_dotenv
-
-load_dotenv('.env')
+from app.core.config import (
+    MAX_CHUNK_HYDE,
+    HYDE_TEMPERATURE,
+    HYDE_MAX_TOKEN,
+    LIMIT_RRF,
+    NUM_RESULTS,
+    TOP_RERANKED,
+    AGENT_TEMPERATURE,
+    AGENT_MAX_TOKEN,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +73,7 @@ class GigaChatRAGService:
         query: str,
         history: Optional[list[dict]] = None,
         split_chunks: bool = True,
-        max_chunks: int = int(os.getenv('MAX_CHUNK_HYDE', )),
+        max_chunks: int = int(MAX_CHUNK_HYDE),
     ) -> list[str]:
         """Генерация HyDE с разбиением на чанки для множественного поиска.
 
@@ -109,8 +115,8 @@ class GigaChatRAGService:
             hyde_text = await self.llm._generate_text(
                 prompt=prompt,
                 system_prompt="Ты генерируешь гипотетический документ для поиска.",
-                temperature= float(os.getenv('HYDE_TEMPERATURE')),
-                max_tokens= int(os.getenv('HYDE_MAX_TOKEN'))
+                temperature= float(HYDE_TEMPERATURE),
+                max_tokens= int(HYDE_MAX_TOKEN)
                 
             )
 
@@ -123,7 +129,7 @@ class GigaChatRAGService:
     @staticmethod
     def _rrf_fusion(
         results_lists: list[list[dict]],
-        limit: int = int(os.getenv('LIMIT_RRF')),
+        limit: int = int(LIMIT_RRF),
         k: int = 60,
     ) -> list[dict]:
         """Обобщённый RRF для любого числа списков результатов.
@@ -194,7 +200,7 @@ class GigaChatRAGService:
             raise
 
     @staticmethod
-    def _split_hyde(hyde_text: str, max_chunks: int = int(os.getenv('MAX_CHUNK_HYDE'))) -> list[str]:
+    def _split_hyde(hyde_text: str, max_chunks: int = int(MAX_CHUNK_HYDE)) -> list[str]:
         """Разбить HyDE-документ на чанки для множественного поиска.
 
         Перенесено из RAG_Misha/find.py:119-124.
@@ -220,7 +226,7 @@ class GigaChatRAGService:
         self,
         query: str,
         user_groups: list[int],
-        top_k: int = int(os.getenv('NUM_RESULTS')),
+        top_k: int = int(NUM_RESULTS),
         history: Optional[list[dict]] = None,
     ) -> list[dict]:
         """Поиск релевантных чанков: dense + sparse + HyDE + RRF fusion.
@@ -312,7 +318,7 @@ class GigaChatRAGService:
 
         # 5. Reranking (асинхронный)
         t5 = time.time()
-        reranked = await self.reranker.rerank_async(query, fused, top_k=int(os.getenv('TOP_RERANKED')))
+        reranked = await self.reranker.rerank_async(query, fused, top_k=int(TOP_RERANKED))
         logger.info(
             "[TIMING] search() TOTAL took %.2fs (final=%d)",
             time.time() - t0, len(reranked)
@@ -328,7 +334,7 @@ class GigaChatRAGService:
         self,
         query_vector: list[float],
         user_groups: list[int],
-        top_k: int = int(os.getenv('NUM_RESULTS')),
+        top_k: int = int(NUM_RESULTS),
     ) -> list[dict]:
         """Асинхронный поиск в Qdrant через VectorStore.
 
@@ -459,7 +465,7 @@ class GigaChatRAGService:
         self,
         query: str,
         user_groups: list[int],
-        top_k: int = os.getenv('TOP_RERANKED'),
+        top_k: int = int(TOP_RERANKED),
         history: Optional[list[dict]] = None,
     ) -> dict:
         """Сформировать ответ на основании найденных чанков.
@@ -525,8 +531,8 @@ class GigaChatRAGService:
                     f"Контекст:\n{context}"
                    
                 ),
-                temperature= float(os.getenv('AGENT_TEMPERATURE')),
-                max_tokens= int(os.getenv('AGENT_MAX_TOKEN'))
+                temperature= float(AGENT_TEMPERATURE),
+                max_tokens= int(AGENT_MAX_TOKEN)
                 
             )
             logger.info("[TIMING] answer() LLM generate took %.2fs (answer_len=%d)", time.time() - t1, len(answer))

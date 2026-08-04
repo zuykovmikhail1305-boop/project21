@@ -4,26 +4,31 @@ Usage:
     uv run python check_gigachat.py
 """
 
-import os
 import sys
 import base64
 
-from dotenv import load_dotenv
-
-load_dotenv(".env")
+from app.core.config import (
+    GIGACHAT_CLIENT_ID,
+    GIGACHAT_CLIENT_SECRET,
+    GIGACHAT_CREDENTIALS,
+    GIGACHAT_SCOPE,
+    GIGACHAT_MODEL,
+    GIGACHAT_AUTH_URL,
+    GIGACHAT_API_URL,
+)
 
 # --- 1. Show config (without full secrets) ---
 print("=" * 60)
 print("GIGACHAT CONFIGURATION CHECK")
 print("=" * 60)
 
-client_id = os.getenv("GIGACHAT_CLIENT_ID", "")
-client_secret = os.getenv("GIGACHAT_CLIENT_SECRET", "")
-credentials = os.getenv("GIGACHAT_CREDENTIALS", "")
-scope = os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
-model = os.getenv("GIGACHAT_MODEL", "GigaChat-2")
-auth_url = os.getenv("GIGACHAT_AUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth")
-api_url = os.getenv("GIGACHAT_API_URL", "https://api.giga.chat/v1")
+client_id = GIGACHAT_CLIENT_ID
+client_secret = GIGACHAT_CLIENT_SECRET
+credentials = GIGACHAT_CREDENTIALS
+scope = GIGACHAT_SCOPE
+model = GIGACHAT_MODEL
+auth_url = GIGACHAT_AUTH_URL
+api_url = GIGACHAT_API_URL
 
 print(f"  GIGACHAT_CLIENT_ID:     {'[SET]' if client_id else '[MISSING]'} ({client_id[:8] if client_id else ''}...)")
 print(f"  GIGACHAT_CLIENT_SECRET: {'[SET]' if client_secret else '[MISSING]'}")

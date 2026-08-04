@@ -1,0 +1,24 @@
+# Байт-код и кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Виртуальные окружения
+venv/
+ENV/
+env/
+.venv/
+
+# Настройки среды и секреты
+.env
+
+# Папки редакторов и IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Логи и базы данных
+*.log
+db.sqlite3

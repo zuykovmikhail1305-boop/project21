@@ -5,10 +5,16 @@ from app.services.rag_embedder import Embedding
 from app.services.bm25_searcher import BM25Search
 from app.RAG_Misha.processing import Processing
 from sentence_transformers import CrossEncoder
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import (
+    HYDE_TEMPERATURE,
+    HYDE_MAX_TOKEN,
+    NUM_RESULTS,
+    MAX_CHUNK_HYDE,
+    TOP_RERANKED,
+    LIMIT_RRF,
+    CROSS_ENC,
+    GIGACHAT_CREDENTIALS,
+)
 
 
 class Find_answer:
@@ -20,18 +26,18 @@ class Find_answer:
         self.history = history if history is not None else []
 
         # Конфиг для HyDE
-        self.hyde_temperature = float(os.getenv("HYDE_TEMPERATURE", "0.7"))
-        self.hyde_max_tokens = int(os.getenv("HYDE_MAX_TOKEN", "2048"))
+        self.hyde_temperature = float(HYDE_TEMPERATURE)
+        self.hyde_max_tokens = int(HYDE_MAX_TOKEN)
 
-        self.num_results = int(os.getenv("NUM_RESULTS", "10"))
-        self.max_chunks = int(os.getenv("MAX_CHUNK_HYDE", "5"))
-        self.top_k = int(os.getenv("TOP_RERANKED", "3"))
-        self.limit_rrf = int(os.getenv("LIMIT_RRF", "10"))
-        self.cross_encoder_model = os.getenv("CROSS_ENC", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+        self.num_results = int(NUM_RESULTS)
+        self.max_chunks = int(MAX_CHUNK_HYDE)
+        self.top_k = int(TOP_RERANKED)
+        self.limit_rrf = int(LIMIT_RRF)
+        self.cross_encoder_model = CROSS_ENC
 
         # Используем GigaChat для HyDE генерации
         self.client = GigaChat(
-            credentials=os.getenv("GIGACHAT_CREDENTIALS", ""),
+            credentials=GIGACHAT_CREDENTIALS,
             model="GigaChat-2",
             temperature=self.hyde_temperature,
             max_tokens=self.hyde_max_tokens,

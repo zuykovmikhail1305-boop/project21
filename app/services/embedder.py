@@ -1,20 +1,14 @@
 """Embedder Service - совместимая версия для старого кода (обёртка над rag_embedder.py)."""
 
 from app.services.rag_embedder import Embedding
-import os
-from dotenv import load_dotenv
-
-from app.core import config
-import os
-from dotenv import load_dotenv
-load_dotenv()
+from app.core.config import EMB_MODEL
 
 class EmbedderService:
     """Embedding service - обёртка для обратной совместимости."""
 
     def __init__(
         self,
-        model_name: str = str(os.getenv('EMB_MODEL')),
+        model_name: str = EMB_MODEL,
         device: str = "cpu",
         provider: Optional[object] = None,
     ):

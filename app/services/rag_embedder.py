@@ -3,19 +3,16 @@
 import requests
 import uuid
 from sentence_transformers import SentenceTransformer
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import EMB_MODEL, QDRANT_BASE, QDRANT_COLLECTION, VECTOR_SIZE
 
 
 class Embedding:
     def __init__(self):
         # Чтение переменных окружения с дефолтными значениями
-        self.emb_model = os.getenv("EMB_MODEL", "all-MiniLM-L6-v2")
-        self.qdrant_url = os.getenv("QDRANT_BASE", "http://localhost:6333")
-        self.collection_name = os.getenv("QDRANT_COLLECTION", "my_docs")
-        self.vector_size = int(os.getenv("VECTOR_SIZE", "384"))  # если есть в .env, иначе 384
+        self.emb_model = EMB_MODEL
+        self.qdrant_url = QDRANT_BASE
+        self.collection_name = QDRANT_COLLECTION
+        self.vector_size = VECTOR_SIZE
 
         self.model = SentenceTransformer(self.emb_model)
 

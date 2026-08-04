@@ -9,8 +9,7 @@ from collections import defaultdict
 import os
 import tempfile
 from docx2pdf import convert
-from dotenv import load_dotenv
-load_dotenv()
+from app.core.config import CHUNK_MODEL, CHUNK_THRESHOLD, MODEL_CACHE_DIR, LOCAL_FILES_ONLY
 
 
 class Processing():
@@ -23,10 +22,10 @@ class Processing():
     def __init__(self):
         self.pdf_path = None
         # Читаем переменные окружения с дефолтными значениями
-        self.chunk_model = os.getenv("CHUNK_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-        self.chunk_threshold = int(os.getenv("CHUNK_THRESHOLD", "75"))  # если есть переменная, иначе 75
-        self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
-        self.local_files_only = self._env_to_bool(os.getenv("LOCAL_FILES_ONLY"), default=False)
+        self.chunk_model = CHUNK_MODEL
+        self.chunk_threshold = int(CHUNK_THRESHOLD)  # если есть переменная, иначе 75
+        self.model_cache_dir = MODEL_CACHE_DIR
+        self.local_files_only = LOCAL_FILES_ONLY
 
         if self.local_files_only:
             os.environ.setdefault("HF_HUB_OFFLINE", "1")
